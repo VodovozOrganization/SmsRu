@@ -52,30 +52,69 @@ namespace SmsRu
             this.test = test;
         }
 
+        /// <summary>
+        /// Логин для доступа к сервису SMS.RU
+        /// </summary>
         public string Login => login;
 
+        /// <summary>
+        /// Пароль для доступа к сервису SMS.RU
+        /// </summary>
         public string Password => password;
 
+        /// <summary>
+        /// Является вашим секретным кодом, который используется во внешних программах
+        /// </summary>
         public string ApiId => apiId;
 
+        /// <summary>
+        /// Если вы участвуете в партнерской программе, укажите этот параметр в запросе
+        /// </summary>
         public string PartnerId => partnerId;
 
+        /// <summary>
+        ///  Ваш уникальный адрес (для отправки СМС по email)
+        /// </summary>
         public string EmailToSmsGateEmail => emailToSmsGateEmail;
 
+        /// <summary>
+        /// Ваш email адрес для отправки
+        /// </summary>
         public string Email => email;
 
+        /// <summary>
+        /// Логин для авторизации на SMTP-сервере
+        /// </summary>
         public string SmtpLogin => smtpLogin;
 
+        /// <summary>
+        /// Пароль для авторизации на SMTP-сервере
+        /// </summary>
         public string SmtpPassword => smtpPassword;
 
+        /// <summary>
+        /// SMTP-сервер
+        /// </summary>
         public string SmtpServer => smtpServer;
 
+        /// <summary>
+        /// Порт для авторизации на SMTP-сервере
+        /// </summary>
         public int SmtpPort => smtpPort;
 
+        /// <summary>
+        /// Флаг - использовать SSL
+        /// </summary>
         public bool SmtpUseSSL => smtpUsrSSL;
 
+        /// <summary>
+        /// Переводит все русские символы в латинские
+        /// </summary>
         public bool Translit => translit;
 
+        /// <summary>
+        /// Имитирует отправку сообщения для тестирования ваших программ на правильность обработки ответов сервера. При этом само сообщение не отправляется и баланс не расходуется.
+        /// </summary>
         public bool Test => test;
     }
 }
