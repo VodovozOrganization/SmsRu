@@ -9,18 +9,18 @@ namespace SmsRu.Helpers
     {
         // http://stackoverflow.com/a/624379
         // Почему этот метод быстрее BitConverter.
-        public static String ByteArrayToHex(Byte[] bytes)
+        public static string ByteArrayToHex(byte[] bytes)
         {
-            Char[] c = new Char[bytes.Length * 2];
-            Int32 b;
-            for (Int32 i = 0; i < bytes.Length; i++)
+            char[] c = new char[bytes.Length * 2];
+            int b;
+            for (int i = 0; i < bytes.Length; i++)
             {
                 b = bytes[i] >> 4;
-                c[i * 2] = (Char)(55 + b + (((b - 10) >> 31) & -7));
+                c[i * 2] = (char)(55 + b + (((b - 10) >> 31) & -7));
                 b = bytes[i] & 0xF;
-                c[i * 2 + 1] = (Char)(55 + b + (((b - 10) >> 31) & -7));
+                c[i * 2 + 1] = (char)(55 + b + (((b - 10) >> 31) & -7));
             }
-            return new String(c);
+            return new string(c);
         }
     }
 }

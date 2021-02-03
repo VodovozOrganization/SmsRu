@@ -15,11 +15,11 @@ namespace SmsRu.Helpers
         /// <param name="input">Входная строка.</param>
         /// <param name="algorithm">Алгоритм вычисления хеш-функции.</param>
         /// <returns>SHA512 хеш.</returns>
-        public static String ComputeHash(String input, HashAlgorithm algorithm)
+        public static string ComputeHash(string input, HashAlgorithm algorithm)
         {
-            Byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+            byte[] inputBytes = Encoding.UTF8.GetBytes(input);
 
-            Byte[] hashedBytes = algorithm.ComputeHash(inputBytes);
+            byte[] hashedBytes = algorithm.ComputeHash(inputBytes);
 
             return ConvertersHelper.ByteArrayToHex(hashedBytes);
         }        
@@ -29,11 +29,11 @@ namespace SmsRu.Helpers
         /// </summary>
         /// <param name="inputString">Входная строка.</param>
         /// <returns>SHA512 хеш в нижнем регистре (hex).</returns>
-        public static String GetSHA512Hash(String inputString)
+        public static string GetSHA512Hash(string inputString)
         {
             using (SHA512 sha = new SHA512Managed())
             {
-                Byte[] input = Encoding.UTF8.GetBytes(inputString);
+                byte[] input = Encoding.UTF8.GetBytes(inputString);
                 return ConvertersHelper.ByteArrayToHex(sha.ComputeHash(input));
             }
         }

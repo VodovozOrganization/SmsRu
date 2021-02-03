@@ -11,7 +11,7 @@ namespace SmsRu.Helpers
         /// Получить текущее время в UNIX-формате.
         /// </summary>
         /// <returns>Время в UNIX-формате.</returns>
-        public static Int32 GetCurrentUnixTime()
+        public static int GetCurrentUnixTime()
         {            
             return GetUnixTime(DateTime.Now);
         }
@@ -21,14 +21,14 @@ namespace SmsRu.Helpers
         /// </summary>
         /// <param name="dateTime">Требуемый момент времени.</param>
         /// <returns>Время в UNIX-формате.</returns>
-        public static Int32 GetUnixTime(DateTime dateTime)
+        public static int GetUnixTime(DateTime dateTime)
         {
             // http://en.wikipedia.org/wiki/Unix_time
 
             dateTime = TimeZoneInfo.ConvertTimeToUtc(dateTime);
             TimeSpan t = (dateTime - new DateTime(1970, 1, 1, 0, 0, 0));
 
-            return (Int32)t.TotalSeconds;
+            return (int)t.TotalSeconds;
         }
     }
 }

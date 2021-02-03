@@ -27,88 +27,88 @@ namespace SmsRu
 
         #region Переменные
 
-        String login = ConfigurationManager.AppSettings["smsRuLogin"];                              // Логин для доступа к SMS.RU
-        String password = ConfigurationManager.AppSettings["smsRuPassword"];                        // Пароль для доступа к SMS.RU 
-        String apiId = ConfigurationManager.AppSettings["smsRuApiID"];                              // Является вашим секретным кодом, который используется во внешних программах 
-        String partnerId = ConfigurationManager.AppSettings["partnerId"];                           // Если вы участвуете в партнерской программе, укажите этот параметр в запросе
-        String SmsRuEmail = ConfigurationManager.AppSettings["smsRuApiID"] + "@sms.ru";             // Ваш уникальный адрес (для отправки СМС по email)
-        String email = ConfigurationManager.AppSettings["email"];                                   // Ваш email адрес для отправки
-        String smtpLogin = ConfigurationManager.AppSettings["smtpLogin"];                           // Логин для авторизации на SMTP-сервере.
-        String smtpPassword = ConfigurationManager.AppSettings["smtpPassword"];                     // Пароль для авторизации на SMTP-сервере.
-        String smtpServer = ConfigurationManager.AppSettings["smtpServer"];                         // SMTP-сервер.
-        Int32 smtpPort = Convert.ToInt32(ConfigurationManager.AppSettings["smtpPort"]);             // Порт для авторизации на SMTP-сервере.
-        Boolean smtpUseSSL = Convert.ToBoolean(ConfigurationManager.AppSettings["smtpUseSSL"]);     // Флаг - использовать SSL.
-        Boolean translit = Convert.ToBoolean(ConfigurationManager.AppSettings["translit"]);         // Переводит все русские символы в латинские.
-        Boolean test = Convert.ToBoolean(ConfigurationManager.AppSettings["test"]);                 // Имитирует отправку сообщения для тестирования ваших программ на правильность обработки ответов сервера. При этом само сообщение не отправляется и баланс не расходуется.
+        string login = ConfigurationManager.AppSettings["smsRuLogin"];                              // Логин для доступа к SMS.RU
+        string password = ConfigurationManager.AppSettings["smsRuPassword"];                        // Пароль для доступа к SMS.RU 
+        string apiId = ConfigurationManager.AppSettings["smsRuApiID"];                              // Является вашим секретным кодом, который используется во внешних программах 
+        string partnerId = ConfigurationManager.AppSettings["partnerId"];                           // Если вы участвуете в партнерской программе, укажите этот параметр в запросе
+        string SmsRuEmail = ConfigurationManager.AppSettings["smsRuApiID"] + "@sms.ru";             // Ваш уникальный адрес (для отправки СМС по email)
+        string email = ConfigurationManager.AppSettings["email"];                                   // Ваш email адрес для отправки
+        string smtpLogin = ConfigurationManager.AppSettings["smtpLogin"];                           // Логин для авторизации на SMTP-сервере.
+        string smtpPassword = ConfigurationManager.AppSettings["smtpPassword"];                     // Пароль для авторизации на SMTP-сервере.
+        string smtpServer = ConfigurationManager.AppSettings["smtpServer"];                         // SMTP-сервер.
+        int smtpPort = Convert.ToInt32(ConfigurationManager.AppSettings["smtpPort"]);             // Порт для авторизации на SMTP-сервере.
+        bool smtpUseSSL = Convert.ToBoolean(ConfigurationManager.AppSettings["smtpUseSSL"]);     // Флаг - использовать SSL.
+        bool translit = Convert.ToBoolean(ConfigurationManager.AppSettings["translit"]);         // Переводит все русские символы в латинские.
+        bool test = Convert.ToBoolean(ConfigurationManager.AppSettings["test"]);                 // Имитирует отправку сообщения для тестирования ваших программ на правильность обработки ответов сервера. При этом само сообщение не отправляется и баланс не расходуется.
 
         // Адреса-константы для работы с API
-        const String tokenUrl = "http://sms.ru/auth/get_token";
-        const String sendUrl = "http://sms.ru/sms/send";
-        const String statusUrl = "http://sms.ru/sms/status";
-        const String costUrl = "http://sms.ru/sms/cost";
-        const String balanceUrl = "http://sms.ru/my/balance";
-        const String limitUrl = "http://sms.ru/my/limit";
-        const String sendersUrl = "http://sms.ru/my/senders";
-        const String authUrl = "http://sms.ru/auth/check";
-        const String stoplistAddUrl = "http://sms.ru/stoplist/add";
-        const String stoplistDelUrl = "http://sms.ru/stoplist/del";
-        const String stoplistGetUrl = "http://sms.ru/stoplist/get";
+        const string tokenUrl = "http://sms.ru/auth/get_token";
+        const string sendUrl = "http://sms.ru/sms/send";
+        const string statusUrl = "http://sms.ru/sms/status";
+        const string costUrl = "http://sms.ru/sms/cost";
+        const string balanceUrl = "http://sms.ru/my/balance";
+        const string limitUrl = "http://sms.ru/my/limit";
+        const string sendersUrl = "http://sms.ru/my/senders";
+        const string authUrl = "http://sms.ru/auth/check";
+        const string stoplistAddUrl = "http://sms.ru/stoplist/add";
+        const string stoplistDelUrl = "http://sms.ru/stoplist/del";
+        const string stoplistGetUrl = "http://sms.ru/stoplist/get";
 
         // Пути к файлам с логами работы.
-        String dir = ConfigurationManager.AppSettings["logFolder"];
-        String log_sent = ConfigurationManager.AppSettings["logFolder"] + "Sent.txt";
-        String log_status = ConfigurationManager.AppSettings["logFolder"] + "Status.txt";
-        String log_cost = ConfigurationManager.AppSettings["logFolder"] + "Cost.txt";
-        String log_balance = ConfigurationManager.AppSettings["logFolder"] + "Balance.txt";
-        String log_limit = ConfigurationManager.AppSettings["logFolder"] + "Limit.txt";
-        String log_senders = ConfigurationManager.AppSettings["logFolder"] + "Senders.txt";
-        String log_auth = ConfigurationManager.AppSettings["logFolder"] + "AuthCheck.txt";
-        String log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
-        String log_stoplist = ConfigurationManager.AppSettings["logFolder"] + "Stoplist.txt";
+        string dir = ConfigurationManager.AppSettings["logFolder"];
+        string log_sent = ConfigurationManager.AppSettings["logFolder"] + "Sent.txt";
+        string log_status = ConfigurationManager.AppSettings["logFolder"] + "Status.txt";
+        string log_cost = ConfigurationManager.AppSettings["logFolder"] + "Cost.txt";
+        string log_balance = ConfigurationManager.AppSettings["logFolder"] + "Balance.txt";
+        string log_limit = ConfigurationManager.AppSettings["logFolder"] + "Limit.txt";
+        string log_senders = ConfigurationManager.AppSettings["logFolder"] + "Senders.txt";
+        string log_auth = ConfigurationManager.AppSettings["logFolder"] + "AuthCheck.txt";
+        string log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
+        string log_stoplist = ConfigurationManager.AppSettings["logFolder"] + "Stoplist.txt";
         #endregion
 
         #region Отправка сообщений
 
 
-        public String Send(String from, String to, String text)
+        public string Send(string from, string to, string text)
         {
-            return Send(from, new String[] { to }, text, DateTime.MinValue, EnumAuthenticationTypes.Strong);
+            return Send(from, new string[] { to }, text, DateTime.MinValue, EnumAuthenticationTypes.Strong);
         }
 
-        public String Send(String from, String to, String text, DateTime dateTime)
+        public string Send(string from, string to, string text, DateTime dateTime)
         {
-            return Send(from, new String[] { to }, text, dateTime, EnumAuthenticationTypes.Strong);
+            return Send(from, new string[] { to }, text, dateTime, EnumAuthenticationTypes.Strong);
         }
 
-        public String Send(String from, String to, String text, EnumAuthenticationTypes authType)
+        public string Send(string from, string to, string text, EnumAuthenticationTypes authType)
         {
-            return Send(from, new String[] { to }, text, DateTime.MinValue, authType);
+            return Send(from, new string[] { to }, text, DateTime.MinValue, authType);
         }
 
-        public String Send(String from, String to, String text, DateTime dateTime, EnumAuthenticationTypes authType)
+        public string Send(string from, string to, string text, DateTime dateTime, EnumAuthenticationTypes authType)
         {
-            return Send(from, new String[] { to }, text, dateTime, authType);
+            return Send(from, new string[] { to }, text, dateTime, authType);
         }
 
-        public String Send(String from, String[] to, String text)
+        public string Send(string from, string[] to, string text)
         {
             return Send(from, to, text, DateTime.MinValue, EnumAuthenticationTypes.Strong);
         }
 
-        public String Send(String from, String[] to, String text, DateTime dateTime)
+        public string Send(string from, string[] to, string text, DateTime dateTime)
         {
             return Send(from, to, text, dateTime, EnumAuthenticationTypes.Strong);
         }
 
-        public String Send(String from, String[] to, String text, EnumAuthenticationTypes authType)
+        public string Send(string from, string[] to, string text, EnumAuthenticationTypes authType)
         {
             return Send(from, to, text, DateTime.MinValue, authType);
         }
         
-        public String Send(String from, String[] to, String text, DateTime dateTime, EnumAuthenticationTypes authType)
+        public string Send(string from, string[] to, string text, DateTime dateTime, EnumAuthenticationTypes authType)
         {
             // TODO: Нужно проверить хватит ли баланса. Баланса не хватит, чтобы отправить на все номера - сообщение будет уничтожено (его не получит никто).
-            String result = String.Empty;
+            string result = string.Empty;
 
             if (to.Length < 1)
                 throw new ArgumentNullException("to", "Неверные входные данные - массив пуст.");
@@ -134,48 +134,48 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_sent, true))
             {
-                String auth = String.Empty;
-                String parameters = String.Empty;
-                String answer = String.Empty;
-                String recipients = String.Empty;
-                String token = String.Empty;
+                string auth = string.Empty;
+                string parameters = string.Empty;
+                string answer = string.Empty;
+                string recipients = string.Empty;
+                string token = string.Empty;
 
-                foreach (String item in to)
+                foreach (string item in to)
                 {
                     recipients += item + ",";
                 }
                 recipients = recipients.Substring(0, recipients.Length - 1);
-                writer.WriteLine(String.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
+                writer.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
 
-                    parameters = String.Format("{0}&to={1}&text={2}&from={3}", auth, recipients, text, from);
+                    parameters = string.Format("{0}&to={1}&text={2}&from={3}", auth, recipients, text, from);
                     if (dateTime != DateTime.MinValue)
                         parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
-                    if (partnerId != String.Empty)
+                    if (partnerId != string.Empty)
                         parameters += "&partner_id=" + partnerId;
                     if (translit == true)
                         parameters += "&translit=1";
                     if (test == true)
                         parameters += "&test=1";
-                    writer.WriteLine(String.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
+                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
 
                     WebRequest request = WebRequest.Create(sendUrl);
                     request.ContentType = "application/x-www-form-urlencoded";
                     request.Method = "POST";
-                    Byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
                     request.ContentLength = bytes.Length;
                     Stream os = request.GetRequestStream();
                     os.Write(bytes, 0, bytes.Length);
@@ -190,10 +190,10 @@ namespace SmsRu
                         }
                     }
 
-                    writer.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
 
-                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
                     {
                         result = answer;
@@ -202,11 +202,11 @@ namespace SmsRu
                     {
                         using (StreamWriter w = new StreamWriter(log_error, true))
                         {
-                            w.WriteLine(String.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
-                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                            w.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
+                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
                         }
-                        result = String.Empty;
+                        result = string.Empty;
                     }
                 }
                 catch (Exception ex)
@@ -227,25 +227,25 @@ namespace SmsRu
             return result;
         }
 
-        public String SendMultiple(String from, Dictionary<String, String> toAndText)
+        public string SendMultiple(string from, Dictionary<string, string> toAndText)
         {
             return SendMultiple(from, toAndText, DateTime.Now, EnumAuthenticationTypes.Strong);
         }
 
-        public String SendMultiple(String from, Dictionary<String, String> toAndText, DateTime dateTime)
+        public string SendMultiple(string from, Dictionary<string, string> toAndText, DateTime dateTime)
         {
             return SendMultiple(from, toAndText, dateTime, EnumAuthenticationTypes.Strong);
         }
 
-        public String SendMultiple(String from, Dictionary<String, String> toAndText, EnumAuthenticationTypes authType)
+        public string SendMultiple(string from, Dictionary<string, string> toAndText, EnumAuthenticationTypes authType)
         {
             return SendMultiple(from, toAndText, DateTime.Now, authType);
         }
 
-        public String SendMultiple(String from, Dictionary<String, String> toAndText, DateTime dateTime, EnumAuthenticationTypes authType)
+        public string SendMultiple(string from, Dictionary<string, string> toAndText, DateTime dateTime, EnumAuthenticationTypes authType)
         {
             // TODO: Нужно проверить хватит ли баланса. Баланса не хватит, чтобы отправить на все номера - сообщение будет уничтожено (его не получит никто).
-            String result = String.Empty;
+            string result = string.Empty;
 
             if (toAndText.Count < 1)
                 throw new ArgumentNullException("to", "Неверные входные данные - массив пуст.");
@@ -271,48 +271,48 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_sent, true))
             {
-                String auth = String.Empty;
-                String parameters = String.Empty;
-                String answer = String.Empty;
-                String recipients = String.Empty;
-                String token = String.Empty;
+                string auth = string.Empty;
+                string parameters = string.Empty;
+                string answer = string.Empty;
+                string recipients = string.Empty;
+                string token = string.Empty;
 
-                foreach (KeyValuePair<String, String> kvp in toAndText)
+                foreach (KeyValuePair<string, string> kvp in toAndText)
                 {
                     recipients += "&multi[" + kvp.Key + "]=" + kvp.Value;
                 }
 
-                writer.WriteLine(String.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
+                writer.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
 
-                    parameters = String.Format("{0}&from={1}{2}", auth, from, recipients);
+                    parameters = string.Format("{0}&from={1}{2}", auth, from, recipients);
                     if (dateTime != DateTime.MinValue)
                         parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
-                    if (partnerId != String.Empty)
+                    if (partnerId != string.Empty)
                         parameters += "&partner_id=" + partnerId;
                     if (translit == true)
                         parameters += "&translit=1";
                     if (test == true)
                         parameters += "&test=1";
-                    writer.WriteLine(String.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
+                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
 
                     WebRequest request = WebRequest.Create(sendUrl);
                     request.ContentType = "application/x-www-form-urlencoded";
                     request.Method = "POST";
-                    Byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
                     request.ContentLength = bytes.Length;
                     Stream os = request.GetRequestStream();
                     os.Write(bytes, 0, bytes.Length);
@@ -327,10 +327,10 @@ namespace SmsRu
                         }
                     }
 
-                    writer.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
 
-                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
                     {
                         result = answer;
@@ -339,11 +339,11 @@ namespace SmsRu
                     {
                         using (StreamWriter w = new StreamWriter(log_error, true))
                         {
-                            w.WriteLine(String.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
-                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                            w.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
+                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
                         }
-                        result = String.Empty;
+                        result = string.Empty;
                     }
                 }
                 catch (Exception ex)
@@ -364,7 +364,7 @@ namespace SmsRu
             return result;
         }
         
-        public ResponseOnSendRequest SendByEmail(String[] to, String text)
+        public ResponseOnSendRequest SendByEmail(string[] to, string text)
         {
             /*
              * Используется отправка по SMTP протоколу.
@@ -381,7 +381,7 @@ namespace SmsRu
 
             // TODO: Нужно проверить хватит ли баланса. Баланса не хватит, чтобы отправить на все номера - сообщение будет уничтожено (его не получит никто).
 
-            String recipients = String.Empty;
+            string recipients = string.Empty;
             try
             {
                 if (!Directory.Exists(dir))
@@ -396,12 +396,12 @@ namespace SmsRu
             {
                 try
                 {
-                    foreach (String item in to)
+                    foreach (string item in to)
                     {
                         recipients += item + ",";
                     }
                     recipients = recipients.Substring(0, recipients.Length - 1);
-                    writer.WriteLine(String.Format("{2}{0}={1}{2}Отправка СМС получателям:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                    writer.WriteLine(string.Format("{2}{0}={1}{2}Отправка СМС получателям:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
                     writer.WriteLine(recipients + Environment.NewLine);
 
                     var smtp = new SmtpClient
@@ -422,7 +422,7 @@ namespace SmsRu
                     })
                     {
                         smtp.Send(message);
-                        writer.WriteLine(String.Format("Текст: {0}{1}Письмо успешно отправлено.", text, Environment.NewLine));
+                        writer.WriteLine(string.Format("Текст: {0}{1}Письмо успешно отправлено.", text, Environment.NewLine));
                     }
 
                     result = ResponseOnSendRequest.MessageAccepted;
@@ -444,7 +444,7 @@ namespace SmsRu
 
         #region Проверка статуса сообщения
         
-        public ResponseOnStatusRequest CheckStatus(String id, EnumAuthenticationTypes authType)
+        public ResponseOnStatusRequest CheckStatus(string id, EnumAuthenticationTypes authType)
         {
             ResponseOnStatusRequest result = ResponseOnStatusRequest.MethodNotFound;
 
@@ -460,28 +460,28 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_status, true))
             {
-                writer.WriteLine(String.Format("{0}={1}{2}Проверка статуса по сообщению: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, id));
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                writer.WriteLine(string.Format("{0}={1}{2}Проверка статуса по сообщению: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, id));
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", statusUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", statusUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}&id={1}", auth, id);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}&id={1}", auth, id);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -493,10 +493,10 @@ namespace SmsRu
                                 {
                                     answer = sr.ReadToEnd();
 
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/status" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStatusRequest.MessageRecieved))
                                     {
                                         result = ResponseOnStatusRequest.MessageRecieved;
@@ -505,9 +505,9 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Проверка статуса по сообщению: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, id));
-                                            w.WriteLine(String.Format("Запрос: {0}", link));
-                                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Проверка статуса по сообщению: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, id));
+                                            w.WriteLine(string.Format("Запрос: {0}", link));
+                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/status" + Environment.NewLine);
                                         }
 
@@ -539,9 +539,9 @@ namespace SmsRu
 
         #region Узнать стоимость сообщения и количество необходимых для отправки сообщений
         
-        public String CheckCost(String to, String text, EnumAuthenticationTypes authType)
+        public string CheckCost(string to, string text, EnumAuthenticationTypes authType)
         {
-            String result = String.Empty;
+            string result = string.Empty;
 
             try
             {
@@ -555,28 +555,28 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_cost, true))
             {
-                writer.WriteLine(String.Format("{0}={1}{2}Cтоимость сообщения и количество необходимых для отправки сообщений: {3}{2}{3}Сообщение: {4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, to, text));
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                writer.WriteLine(string.Format("{0}={1}{2}Cтоимость сообщения и количество необходимых для отправки сообщений: {3}{2}{3}Сообщение: {4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, to, text));
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", costUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", costUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}&to={1}&text={2}", auth, to, text);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}&to={1}&text={2}", auth, to, text);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -587,10 +587,10 @@ namespace SmsRu
                                 using (StreamReader sr = new StreamReader(stream))
                                 {
                                     answer = sr.ReadToEnd();
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/cost" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnCostRequest.Done))
                                     {
                                         result = answer;
@@ -599,12 +599,12 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Cтоимость сообщения и количество необходимых для отправки сообщений: {3}{2}{4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, to, text));
-                                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Cтоимость сообщения и количество необходимых для отправки сообщений: {3}{2}{4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, to, text));
+                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/cost" + Environment.NewLine);
                                         }
 
-                                        result = String.Empty;
+                                        result = string.Empty;
                                     }
                                 }
                         }
@@ -630,9 +630,9 @@ namespace SmsRu
 
         #region Получение состояния баланса
         
-        public String CheckBalance(EnumAuthenticationTypes authType)
+        public string CheckBalance(EnumAuthenticationTypes authType)
         {
-            String result = String.Empty;
+            string result = string.Empty;
 
             try
             {
@@ -646,28 +646,28 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_balance, true))
             {
-                writer.WriteLine(String.Format("{0}={1}{2}Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                writer.WriteLine(string.Format("{0}={1}{2}Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", balanceUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", balanceUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}", auth);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}", auth);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -678,10 +678,10 @@ namespace SmsRu
                                 using (StreamReader sr = new StreamReader(stream))
                                 {
                                     answer = sr.ReadToEnd();
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/balance" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnBalanceRequest.Done))
                                     {
                                         result = answer;
@@ -690,12 +690,12 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(String.Format("Ответ: {0}", answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                                            w.WriteLine(string.Format("Ответ: {0}", answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/balance" + Environment.NewLine);
                                         }
 
-                                        result = String.Empty;
+                                        result = string.Empty;
                                     }
                                 }
                         }
@@ -721,9 +721,9 @@ namespace SmsRu
 
         #region Получение текущего состояния дневного лимита
        
-        public String CheckLimit(EnumAuthenticationTypes authType)
+        public string CheckLimit(EnumAuthenticationTypes authType)
         {
-            String result = String.Empty;
+            string result = string.Empty;
 
             try
             {
@@ -737,28 +737,28 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_limit, true))
             {
-                writer.WriteLine(String.Format("{0}={1}{2}Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                writer.WriteLine(string.Format("{0}={1}{2}Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", limitUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", limitUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}", auth);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}", auth);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -770,10 +770,10 @@ namespace SmsRu
                                 {
                                     answer = sr.ReadToEnd();
 
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/limit" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnLimitRequest.Done))
                                     {
                                         result = answer;
@@ -782,12 +782,12 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/limit" + Environment.NewLine);
                                         }
 
-                                        result = String.Empty;
+                                        result = string.Empty;
                                     }
                                 }
                         }
@@ -813,9 +813,9 @@ namespace SmsRu
 
         #region Получение списка отправителей
         
-        public String CheckSenders(EnumAuthenticationTypes authType)
+        public string CheckSenders(EnumAuthenticationTypes authType)
         {
-            String result = String.Empty;
+            string result = string.Empty;
 
             try
             {
@@ -829,28 +829,28 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_senders, true))
             {
-                writer.WriteLine(String.Format("{0}={1}{2}Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                writer.WriteLine(string.Format("{0}={1}{2}Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", sendersUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", sendersUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}", auth);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}", auth);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -862,10 +862,10 @@ namespace SmsRu
                                 {
                                     answer = sr.ReadToEnd();
 
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/senders" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendersRequest.Done))
                                     {
                                         result = answer;
@@ -874,8 +874,8 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/senders" + Environment.NewLine);
                                         }
                                     }
@@ -903,9 +903,9 @@ namespace SmsRu
 
         #region Получение токена
         
-        public String GetToken()
+        public string GetToken()
         {
-            String result = String.Empty;
+            string result = string.Empty;
 
             try
             {
@@ -963,28 +963,28 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_auth, true))
             {
-                writer.WriteLine(String.Format("{0}={1}{2}Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                writer.WriteLine(string.Format("{0}={1}{2}Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", authUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", authUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}", auth);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}", auth);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -996,10 +996,10 @@ namespace SmsRu
                                 {
                                     answer = sr.ReadToEnd();
 
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=auth/check" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnAuthRequest.Done))
                                     {
                                         result = ResponseOnAuthRequest.Done;
@@ -1008,8 +1008,8 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=auth/check" + Environment.NewLine);
                                         }
 
@@ -1041,11 +1041,11 @@ namespace SmsRu
 
         #region Операции с Stoplist
         
-        public Boolean StoplistAdd(String phone, String text, EnumAuthenticationTypes authType)
+        public bool StoplistAdd(string phone, string text, EnumAuthenticationTypes authType)
         {
-            Boolean result = false;
+            bool result = false;
 
-            if (String.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(text))
                 throw new ArgumentNullException("text", "Неверные входные данные - обязательный параметр.");
 
             try
@@ -1060,36 +1060,36 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_stoplist, true))
             {
-                String auth = String.Empty;
-                String parameters = String.Empty;
-                String answer = String.Empty;
-                String recipients = String.Empty;
-                String token = String.Empty;
+                string auth = string.Empty;
+                string parameters = string.Empty;
+                string answer = string.Empty;
+                string recipients = string.Empty;
+                string token = string.Empty;
 
-                writer.WriteLine(String.Format("Добавление номера в стоплист:{0}Номер: {1}, Примечание: {2}", Environment.NewLine, phone, text));
+                writer.WriteLine(string.Format("Добавление номера в стоплист:{0}Номер: {1}, Примечание: {2}", Environment.NewLine, phone, text));
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
 
-                    parameters = String.Format("{0}&stoplist_phone={1}&stoplist_text={2}", auth, phone, text);
+                    parameters = string.Format("{0}&stoplist_phone={1}&stoplist_text={2}", auth, phone, text);
 
-                    writer.WriteLine(String.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
+                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
 
                     WebRequest request = WebRequest.Create(stoplistAddUrl);
                     request.ContentType = "application/x-www-form-urlencoded";
                     request.Method = "POST";
-                    Byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
                     request.ContentLength = bytes.Length;
                     Stream os = request.GetRequestStream();
                     os.Write(bytes, 0, bytes.Length);
@@ -1104,10 +1104,10 @@ namespace SmsRu
                         }
                     }
 
-                    writer.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/add" + Environment.NewLine);
 
-                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistAddRequest.Done))
                     {
                         result = true;
@@ -1116,8 +1116,8 @@ namespace SmsRu
                     {
                         using (StreamWriter w = new StreamWriter(log_error, true))
                         {
-                            w.WriteLine(String.Format("{0}={1}{2}Добавление номера в стоплист:{2}Номер: {3}, Примечание: {4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, phone, text));
-                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                            w.WriteLine(string.Format("{0}={1}{2}Добавление номера в стоплист:{2}Номер: {3}, Примечание: {4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, phone, text));
+                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/add" + Environment.NewLine);
                         }
                         result = false;
@@ -1141,9 +1141,9 @@ namespace SmsRu
             return result;
         }
         
-        public Boolean StoplistDelete(String phone, EnumAuthenticationTypes authType)
+        public bool StoplistDelete(string phone, EnumAuthenticationTypes authType)
         {
-            Boolean result = false;
+            bool result = false;
 
             try
             {
@@ -1157,36 +1157,36 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_stoplist, true))
             {
-                String auth = String.Empty;
-                String parameters = String.Empty;
-                String answer = String.Empty;
-                String recipients = String.Empty;
-                String token = String.Empty;
+                string auth = string.Empty;
+                string parameters = string.Empty;
+                string answer = string.Empty;
+                string recipients = string.Empty;
+                string token = string.Empty;
 
-                writer.WriteLine(String.Format("Удаление номера из стоплиста:{0}Номер: {1}", Environment.NewLine, phone));
+                writer.WriteLine(string.Format("Удаление номера из стоплиста:{0}Номер: {1}", Environment.NewLine, phone));
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
 
-                    parameters = String.Format("{0}&stoplist_phone={1}", auth, phone);
+                    parameters = string.Format("{0}&stoplist_phone={1}", auth, phone);
 
-                    writer.WriteLine(String.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
+                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
 
                     WebRequest request = WebRequest.Create(stoplistDelUrl);
                     request.ContentType = "application/x-www-form-urlencoded";
                     request.Method = "POST";
-                    Byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
                     request.ContentLength = bytes.Length;
                     Stream os = request.GetRequestStream();
                     os.Write(bytes, 0, bytes.Length);
@@ -1201,10 +1201,10 @@ namespace SmsRu
                         }
                     }
 
-                    writer.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/del" + Environment.NewLine);
 
-                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistDeleteRequest.Done))
                     {
                         result = true;
@@ -1213,8 +1213,8 @@ namespace SmsRu
                     {
                         using (StreamWriter w = new StreamWriter(log_error, true))
                         {
-                            w.WriteLine(String.Format("{0}={1}{2}Удаление номера из стоплиста:{2}Номер: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, phone));
-                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                            w.WriteLine(string.Format("{0}={1}{2}Удаление номера из стоплиста:{2}Номер: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, phone));
+                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/del" + Environment.NewLine);
                         }
                         result = false;
@@ -1238,9 +1238,9 @@ namespace SmsRu
             return result;
         }
         
-        public String StoplistGet(EnumAuthenticationTypes authType)
+        public string StoplistGet(EnumAuthenticationTypes authType)
         {
-            String result = String.Empty;
+            string result = string.Empty;
 
             try
             {
@@ -1254,29 +1254,29 @@ namespace SmsRu
 
             using (StreamWriter writer = new StreamWriter(log_stoplist, true))
             {
-                String auth = String.Empty;
-                String link = String.Empty;
-                String answer = String.Empty;
-                String token = String.Empty;
+                string auth = string.Empty;
+                string link = string.Empty;
+                string answer = string.Empty;
+                string token = string.Empty;
 
-                writer.WriteLine(String.Format("Получение номеров из стоплиста:"));
+                writer.WriteLine(string.Format("Получение номеров из стоплиста:"));
 
                 try
                 {
                     token = GetToken();
 
-                    String sha512 = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}", password, token)).ToLower();
-                    String sha512wapi = HashCodeHelper.GetSHA512Hash(String.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = String.Format("{0}?api_id={1}", stoplistGetUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", stoplistGetUrl, apiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = String.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, login, token, sha512wapi);
 
-                    link = String.Format("{0}", auth);
-                    writer.WriteLine(String.Format("Запрос: {0}", link));
+                    link = string.Format("{0}", auth);
+                    writer.WriteLine(string.Format("Запрос: {0}", link));
 
                     WebRequest req = WebRequest.Create(link);
                     using (WebResponse response = req.GetResponse())
@@ -1288,10 +1288,10 @@ namespace SmsRu
                                 {
                                     answer = sr.ReadToEnd();
 
-                                    writer.WriteLine(String.Format("Ответ: {0}", answer));
+                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
                                     writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/get" + Environment.NewLine);
 
-                                    String[] lines = answer.Split(new String[] { "\n" }, StringSplitOptions.None);
+                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                     if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistGetRequest.Done))
                                     {
                                         result = answer;
@@ -1300,8 +1300,8 @@ namespace SmsRu
                                     {
                                         using (StreamWriter w = new StreamWriter(log_error, true))
                                         {
-                                            w.WriteLine(String.Format("{0}={1}{2}Получение номеров из стоплиста:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(String.Format("Ответ: {0}{1}", Environment.NewLine, answer));
+                                            w.WriteLine(string.Format("{0}={1}{2}Получение номеров из стоплиста:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
                                             w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/get" + Environment.NewLine);
                                         }
                                     }

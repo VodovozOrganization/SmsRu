@@ -31,25 +31,25 @@ namespace SmsRu.Handlers
         {
             if (context.Request.Form.Keys.Count > 0)
             {
-                String log_handler = ConfigurationManager.AppSettings["logFolder"] + "Handler.txt";
-                String log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
+                string log_handler = ConfigurationManager.AppSettings["logFolder"] + "Handler.txt";
+                string log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
                 try
                 {
-                    
-                    String index = String.Empty;
-                    for (Int32 i = 0; i < context.Request.Form.Keys.Count; i++)
+
+                    string index = string.Empty;
+                    for (int i = 0; i < context.Request.Form.Keys.Count; i++)
                     {
                         index = "data[" + i.ToString() + "]";
-                        String[] lines = context.Request.Form[index].Split(new String[] { "\n" }, StringSplitOptions.None);
+                        string[] lines = context.Request.Form[index].Split(new string[] { "\n" }, StringSplitOptions.None);
                         if (lines[0] == "sms_status")
                         {
-                            String smsID = lines[1];
-                            String status = lines[2];
+                            string smsID = lines[1];
+                            string status = lines[2];
 
                             using (StreamWriter writer = new StreamWriter(log_handler, true))
                             {
-                                writer.WriteLine(String.Format("{0}={1}{2}Callback:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                writer.WriteLine(String.Format("Запрос: {0}{1}", Environment.NewLine, context.Request.Form[index]));
+                                writer.WriteLine(string.Format("{0}={1}{2}Callback:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
+                                writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, context.Request.Form[index]));
                                 writer.WriteLine("Документация - http://sms.ru/?panel=apps&subpanel=cb" + Environment.NewLine);
                             }
 
