@@ -43,6 +43,7 @@
     <Compile Include="Helpers\ConvertersHelper.cs" />
     <Compile Include="Helpers\HashCodeHelper.cs" />
     <Compile Include="Helpers\TimeHelper.cs" />
+    <Compile Include="SmsRuConfiguration.cs" />
     <Compile Include="SmsRuProvider.cs" />
     <Compile Include="ISmsProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

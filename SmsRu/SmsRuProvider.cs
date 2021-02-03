@@ -25,22 +25,6 @@ namespace SmsRu
          *
          */
 
-        #region Переменные
-
-        string login = ConfigurationManager.AppSettings["smsRuLogin"];                              // Логин для доступа к SMS.RU
-        string password = ConfigurationManager.AppSettings["smsRuPassword"];                        // Пароль для доступа к SMS.RU 
-        string apiId = ConfigurationManager.AppSettings["smsRuApiID"];                              // Является вашим секретным кодом, который используется во внешних программах 
-        string partnerId = ConfigurationManager.AppSettings["partnerId"];                           // Если вы участвуете в партнерской программе, укажите этот параметр в запросе
-        string SmsRuEmail = ConfigurationManager.AppSettings["smsRuApiID"] + "@sms.ru";             // Ваш уникальный адрес (для отправки СМС по email)
-        string email = ConfigurationManager.AppSettings["email"];                                   // Ваш email адрес для отправки
-        string smtpLogin = ConfigurationManager.AppSettings["smtpLogin"];                           // Логин для авторизации на SMTP-сервере.
-        string smtpPassword = ConfigurationManager.AppSettings["smtpPassword"];                     // Пароль для авторизации на SMTP-сервере.
-        string smtpServer = ConfigurationManager.AppSettings["smtpServer"];                         // SMTP-сервер.
-        int smtpPort = Convert.ToInt32(ConfigurationManager.AppSettings["smtpPort"]);             // Порт для авторизации на SMTP-сервере.
-        bool smtpUseSSL = Convert.ToBoolean(ConfigurationManager.AppSettings["smtpUseSSL"]);     // Флаг - использовать SSL.
-        bool translit = Convert.ToBoolean(ConfigurationManager.AppSettings["translit"]);         // Переводит все русские символы в латинские.
-        bool test = Convert.ToBoolean(ConfigurationManager.AppSettings["test"]);                 // Имитирует отправку сообщения для тестирования ваших программ на правильность обработки ответов сервера. При этом само сообщение не отправляется и баланс не расходуется.
-
         // Адреса-константы для работы с API
         const string tokenUrl = "http://sms.ru/auth/get_token";
         const string sendUrl = "http://sms.ru/sms/send";
@@ -54,6 +38,8 @@ namespace SmsRu
         const string stoplistDelUrl = "http://sms.ru/stoplist/del";
         const string stoplistGetUrl = "http://sms.ru/stoplist/get";
 
+        private readonly SmsRuConfiguration configuration;
+
         // Пути к файлам с логами работы.
         string dir = ConfigurationManager.AppSettings["logFolder"];
         string log_sent = ConfigurationManager.AppSettings["logFolder"] + "Sent.txt";
@@ -65,7 +51,11 @@ namespace SmsRu
         string log_auth = ConfigurationManager.AppSettings["logFolder"] + "AuthCheck.txt";
         string log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
         string log_stoplist = ConfigurationManager.AppSettings["logFolder"] + "Stoplist.txt";
-        #endregion
+
+        public SmsRuProvider(SmsRuConfiguration configuration)
+        {
+            this.configuration = configuration;
+        }
 
         #region Отправка сообщений
 
@@ -151,24 +141,24 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
 
                     parameters = string.Format("{0}&to={1}&text={2}&from={3}", auth, recipients, text, from);
                     if (dateTime != DateTime.MinValue)
                         parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
-                    if (partnerId != string.Empty)
-                        parameters += "&partner_id=" + partnerId;
-                    if (translit == true)
+                    if (configuration.PartnerId != string.Empty)
+                        parameters += "&partner_id=" + configuration.PartnerId;
+                    if (configuration.Translit == true)
                         parameters += "&translit=1";
-                    if (test == true)
+                    if (configuration.Test == true)
                         parameters += "&test=1";
                     writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
 
@@ -288,24 +278,24 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
 
                     parameters = string.Format("{0}&from={1}{2}", auth, from, recipients);
                     if (dateTime != DateTime.MinValue)
                         parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
-                    if (partnerId != string.Empty)
-                        parameters += "&partner_id=" + partnerId;
-                    if (translit == true)
+                    if (configuration.PartnerId != string.Empty)
+                        parameters += "&partner_id=" + configuration.PartnerId;
+                    if (configuration.Translit == true)
                         parameters += "&translit=1";
-                    if (test == true)
+                    if (configuration.Test == true)
                         parameters += "&test=1";
                     writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
 
@@ -406,14 +396,14 @@ namespace SmsRu
 
                     var smtp = new SmtpClient
                     {
-                        Host = smtpServer,
-                        Port = smtpPort,
-                        EnableSsl = smtpUseSSL,
+                        Host = configuration.SmtpServer,
+                        Port = configuration.SmtpPort,
+                        EnableSsl = configuration.SmtpUseSSL,
                         DeliveryMethod = SmtpDeliveryMethod.Network,
-                        Credentials = new NetworkCredential(smtpLogin, smtpPassword),
+                        Credentials = new NetworkCredential(configuration.SmtpLogin, configuration.SmtpPassword),
                         Timeout = 20000
                     };
-                    using (var message = new MailMessage(email, SmsRuEmail)
+                    using (var message = new MailMessage(configuration.Email, configuration.EmailToSmsGateEmail)
                     {
                         Subject = recipients,
                         BodyEncoding = Encoding.UTF8,
@@ -470,15 +460,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", statusUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", statusUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}&id={1}", auth, id);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
@@ -565,15 +555,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", costUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", costUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}&to={1}&text={2}", auth, to, text);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
@@ -656,15 +646,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", balanceUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", balanceUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}", auth);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
@@ -747,15 +737,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", limitUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", limitUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}", auth);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
@@ -839,15 +829,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", sendersUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", sendersUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}", auth);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
@@ -973,15 +963,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", authUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", authUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}", auth);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
@@ -1072,15 +1062,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
 
                     parameters = string.Format("{0}&stoplist_phone={1}&stoplist_text={2}", auth, phone, text);
 
@@ -1169,15 +1159,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", apiId);
+                        auth = string.Format("api_id={0}", configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", login, token, sha512wapi);
+                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
 
                     parameters = string.Format("{0}&stoplist_phone={1}", auth, phone);
 
@@ -1265,15 +1255,15 @@ namespace SmsRu
                 {
                     token = GetToken();
 
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", password, token, apiId)).ToLower();
+                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
 
                     if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", stoplistGetUrl, apiId);
+                        auth = string.Format("{0}?api_id={1}", stoplistGetUrl, configuration.ApiId);
                     if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, login, token, sha512);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, configuration.Login, token, sha512);
                     if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, login, token, sha512wapi);
+                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, configuration.Login, token, sha512wapi);
 
                     link = string.Format("{0}", auth);
                     writer.WriteLine(string.Format("Запрос: {0}", link));
