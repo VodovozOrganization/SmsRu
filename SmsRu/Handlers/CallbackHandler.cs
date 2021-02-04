@@ -1,6 +1,5 @@
-﻿using System;
-using System.Configuration;
-using System.IO;
+﻿using NLog;
+using System;
 using System.Web;
 
 namespace SmsRu.Handlers
@@ -22,6 +21,8 @@ namespace SmsRu.Handlers
         /// </summary>
         #region IHttpHandler Members
 
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+
         public bool IsReusable
         {
             get { return true; }
@@ -31,11 +32,8 @@ namespace SmsRu.Handlers
         {
             if (context.Request.Form.Keys.Count > 0)
             {
-                string log_handler = ConfigurationManager.AppSettings["logFolder"] + "Handler.txt";
-                string log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
                 try
                 {
-
                     string index = string.Empty;
                     for (int i = 0; i < context.Request.Form.Keys.Count; i++)
                     {
@@ -46,12 +44,10 @@ namespace SmsRu.Handlers
                             string smsID = lines[1];
                             string status = lines[2];
 
-                            using (StreamWriter writer = new StreamWriter(log_handler, true))
-                            {
-                                writer.WriteLine(string.Format("{0}={1}{2}Callback:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, context.Request.Form[index]));
-                                writer.WriteLine("Документация - http://sms.ru/?panel=apps&subpanel=cb" + Environment.NewLine);
-                            }
+                            // http://sms.ru/?panel=apps&subpanel=cb
+
+                            logger.Log(LogLevel.Info, string.Format(string.Format("{0}={1}Callback:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString())));
+                            logger.Log(LogLevel.Info, string.Format("Запрос: {0}", context.Request.Form[index]));
 
                             // Ваш код.
                             // Можно использовать EnumResponseCodes для работы со статусами.
@@ -61,12 +57,11 @@ namespace SmsRu.Handlers
                 }
                 catch (Exception ex)
                 {
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер sms.ru недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
+                    logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                        " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                        ex.Message);
+
+                    logger.Log(LogLevel.Trace, ex.StackTrace);
                 }
             }
             context.Response.ContentType = "text/plain";

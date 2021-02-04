@@ -1,8 +1,8 @@
-﻿using SmsRu.Enumerations;
+﻿using NLog;
+using SmsRu.Enumerations;
 using SmsRu.Helpers;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Net.Mail;
@@ -39,26 +39,14 @@ namespace SmsRu
         const string stoplistGetUrl = "http://sms.ru/stoplist/get";
 
         private readonly SmsRuConfiguration configuration;
-
-        // Пути к файлам с логами работы.
-        string dir = ConfigurationManager.AppSettings["logFolder"];
-        string log_sent = ConfigurationManager.AppSettings["logFolder"] + "Sent.txt";
-        string log_status = ConfigurationManager.AppSettings["logFolder"] + "Status.txt";
-        string log_cost = ConfigurationManager.AppSettings["logFolder"] + "Cost.txt";
-        string log_balance = ConfigurationManager.AppSettings["logFolder"] + "Balance.txt";
-        string log_limit = ConfigurationManager.AppSettings["logFolder"] + "Limit.txt";
-        string log_senders = ConfigurationManager.AppSettings["logFolder"] + "Senders.txt";
-        string log_auth = ConfigurationManager.AppSettings["logFolder"] + "AuthCheck.txt";
-        string log_error = ConfigurationManager.AppSettings["logFolder"] + "Error.txt";
-        string log_stoplist = ConfigurationManager.AppSettings["logFolder"] + "Stoplist.txt";
+        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
         public SmsRuProvider(SmsRuConfiguration configuration)
         {
-            this.configuration = configuration;
+            this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         #region Отправка сообщений
-
 
         public string Send(string from, string to, string text)
         {
@@ -110,110 +98,94 @@ namespace SmsRu
             // if ((DateTime.Now - dateTime).Days > new TimeSpan(7, 0, 0, 0).Days)
             //    throw new ArgumentOutOfRangeException("dateTime", "Неверные входные данные - должно быть не больше 7 дней с момента подачи запроса.");
 
-            
+            string auth = string.Empty;
+            string parameters = string.Empty;
+            string answer = string.Empty;
+            string recipients = string.Empty;
+            string token = string.Empty;
+
+            foreach (string item in to)
+            {
+                recipients += item + ",";
+            }
+            recipients = recipients.Substring(0, recipients.Length - 1);
+
+            logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
 
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("api_id={0}", configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
+
+                parameters = string.Format("{0}&to={1}&text={2}&from={3}", auth, recipients, text, from);
+                if (dateTime != DateTime.MinValue)
+                    parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
+                if (configuration.PartnerId != string.Empty)
+                    parameters += "&partner_id=" + configuration.PartnerId;
+                if (configuration.Translit == true)
+                    parameters += "&translit=1";
+                if (configuration.Test == true)
+                    parameters += "&test=1";
+
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+
+                WebRequest request = WebRequest.Create(sendUrl);
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.Method = "POST";
+                byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                request.ContentLength = bytes.Length;
+                Stream os = request.GetRequestStream();
+                os.Write(bytes, 0, bytes.Length);
+                os.Close();
+
+                using (WebResponse resp = request.GetResponse())
+                {
+                    if (resp == null) return null;
+                    using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
+                    {
+                        answer = sr.ReadToEnd().Trim();
+                    }
+                }
+
+                // http://sms.ru/?panel=api&subpanel=method&show=sms/send
+
+                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
+                {
+                    result = answer;
+                }
+                else
+                {
+                    logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+
+                    // http://sms.ru/?panel=api&subpanel=method&show=sms/send
+
+                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                    result = string.Empty;
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_sent, true))
-            {
-                string auth = string.Empty;
-                string parameters = string.Empty;
-                string answer = string.Empty;
-                string recipients = string.Empty;
-                string token = string.Empty;
-
-                foreach (string item in to)
-                {
-                    recipients += item + ",";
-                }
-                recipients = recipients.Substring(0, recipients.Length - 1);
-                writer.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
-
-                    parameters = string.Format("{0}&to={1}&text={2}&from={3}", auth, recipients, text, from);
-                    if (dateTime != DateTime.MinValue)
-                        parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
-                    if (configuration.PartnerId != string.Empty)
-                        parameters += "&partner_id=" + configuration.PartnerId;
-                    if (configuration.Translit == true)
-                        parameters += "&translit=1";
-                    if (configuration.Test == true)
-                        parameters += "&test=1";
-                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
-
-                    WebRequest request = WebRequest.Create(sendUrl);
-                    request.ContentType = "application/x-www-form-urlencoded";
-                    request.Method = "POST";
-                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
-                    request.ContentLength = bytes.Length;
-                    Stream os = request.GetRequestStream();
-                    os.Write(bytes, 0, bytes.Length);
-                    os.Close();
-
-                    using (WebResponse resp = request.GetResponse())
-                    {
-                        if (resp == null) return null;
-                        using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
-                        {
-                            answer = sr.ReadToEnd().Trim();
-                        }
-                    }
-
-                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
-
-                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
-                    {
-                        result = answer;
-                    }
-                    else
-                    {
-                        using (StreamWriter w = new StreamWriter(log_error, true))
-                        {
-                            w.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
-                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
-                        }
-                        result = string.Empty;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-
-            }
             return result;
         }
 
@@ -247,109 +219,85 @@ namespace SmsRu
             // Лишнее, не надо генерировать это исключение. Если время меньше текущего времени, сообщение отправляется моментально - правило на сервере.
             // if ((DateTime.Now - dateTime).Days > new TimeSpan(7, 0, 0, 0).Days)
             //    throw new ArgumentOutOfRangeException("dateTime", "Неверные входные данные - должно быть не больше 7 дней с момента подачи запроса.");
-                       
+
+            string auth = string.Empty;
+            string parameters = string.Empty;
+            string answer = string.Empty;
+            string recipients = string.Empty;
+            string token = string.Empty;
+
+            foreach (KeyValuePair<string, string> kvp in toAndText)
+            {
+                recipients += "&multi[" + kvp.Key + "]=" + kvp.Value;
+            }
+
+            logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
 
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("api_id={0}", configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
+
+                parameters = string.Format("{0}&from={1}{2}", auth, from, recipients);
+                if (dateTime != DateTime.MinValue)
+                    parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
+                if (configuration.PartnerId != string.Empty)
+                    parameters += "&partner_id=" + configuration.PartnerId;
+                if (configuration.Translit == true)
+                    parameters += "&translit=1";
+                if (configuration.Test == true)
+                    parameters += "&test=1";
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+
+                WebRequest request = WebRequest.Create(sendUrl);
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.Method = "POST";
+                byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                request.ContentLength = bytes.Length;
+                Stream os = request.GetRequestStream();
+                os.Write(bytes, 0, bytes.Length);
+                os.Close();
+
+                using (WebResponse resp = request.GetResponse())
+                {
+                    if (resp == null) return null;
+                    using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
+                    {
+                        answer = sr.ReadToEnd().Trim();
+                    }
+                }
+
+                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
+                {
+                    result = answer;
+                }
+                else
+                {
+                    logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+
+                    result = string.Empty;
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
-            }
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
 
-            using (StreamWriter writer = new StreamWriter(log_sent, true))
-            {
-                string auth = string.Empty;
-                string parameters = string.Empty;
-                string answer = string.Empty;
-                string recipients = string.Empty;
-                string token = string.Empty;
-
-                foreach (KeyValuePair<string, string> kvp in toAndText)
-                {
-                    recipients += "&multi[" + kvp.Key + "]=" + kvp.Value;
-                }
-
-                writer.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
-
-                    parameters = string.Format("{0}&from={1}{2}", auth, from, recipients);
-                    if (dateTime != DateTime.MinValue)
-                        parameters += "&time=" + TimeHelper.GetUnixTime(dateTime);
-                    if (configuration.PartnerId != string.Empty)
-                        parameters += "&partner_id=" + configuration.PartnerId;
-                    if (configuration.Translit == true)
-                        parameters += "&translit=1";
-                    if (configuration.Test == true)
-                        parameters += "&test=1";
-                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
-
-                    WebRequest request = WebRequest.Create(sendUrl);
-                    request.ContentType = "application/x-www-form-urlencoded";
-                    request.Method = "POST";
-                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
-                    request.ContentLength = bytes.Length;
-                    Stream os = request.GetRequestStream();
-                    os.Write(bytes, 0, bytes.Length);
-                    os.Close();
-
-                    using (WebResponse resp = request.GetResponse())
-                    {
-                        if (resp == null) return null;
-                        using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
-                        {
-                            answer = sr.ReadToEnd().Trim();
-                        }
-                    }
-
-                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
-
-                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
-                    {
-                        result = answer;
-                    }
-                    else
-                    {
-                        using (StreamWriter w = new StreamWriter(log_error, true))
-                        {
-                            w.WriteLine(string.Format("{0}={1}{2}Отправка СМС получателям: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, recipients));
-                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/send" + Environment.NewLine);
-                        }
-                        result = string.Empty;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
             return result;
         }
@@ -372,60 +320,51 @@ namespace SmsRu
             // TODO: Нужно проверить хватит ли баланса. Баланса не хватит, чтобы отправить на все номера - сообщение будет уничтожено (его не получит никто).
 
             string recipients = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                foreach (string item in to)
+                {
+                    recipients += item + ",";
+                }
+                recipients = recipients.Substring(0, recipients.Length - 1);
+
+                logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+
+                var smtp = new SmtpClient
+                {
+                    Host = configuration.SmtpServer,
+                    Port = configuration.SmtpPort,
+                    EnableSsl = configuration.SmtpUseSSL,
+                    DeliveryMethod = SmtpDeliveryMethod.Network,
+                    Credentials = new NetworkCredential(configuration.SmtpLogin, configuration.SmtpPassword),
+                    Timeout = 20000
+                };
+                using (var message = new MailMessage(configuration.Email, configuration.EmailToSmsGateEmail)
+                {
+                    Subject = recipients,
+                    BodyEncoding = Encoding.UTF8,
+                    IsBodyHtml = false,
+                    Body = text
+                })
+                {
+                    smtp.Send(message);
+
+                    logger.Log(LogLevel.Info, string.Format("Текст: {0} Письмо успешно отправлено.", text));
+                }
+
+                result = ResponseOnSendRequest.MessageAccepted;
+
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
-            }
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
 
-            using (StreamWriter writer = new StreamWriter(log_sent, true))
-            {
-                try
-                {
-                    foreach (string item in to)
-                    {
-                        recipients += item + ",";
-                    }
-                    recipients = recipients.Substring(0, recipients.Length - 1);
-                    writer.WriteLine(string.Format("{2}{0}={1}{2}Отправка СМС получателям:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                    writer.WriteLine(recipients + Environment.NewLine);
+                logger.Log(LogLevel.Trace, ex.StackTrace);
 
-                    var smtp = new SmtpClient
-                    {
-                        Host = configuration.SmtpServer,
-                        Port = configuration.SmtpPort,
-                        EnableSsl = configuration.SmtpUseSSL,
-                        DeliveryMethod = SmtpDeliveryMethod.Network,
-                        Credentials = new NetworkCredential(configuration.SmtpLogin, configuration.SmtpPassword),
-                        Timeout = 20000
-                    };
-                    using (var message = new MailMessage(configuration.Email, configuration.EmailToSmsGateEmail)
-                    {
-                        Subject = recipients,
-                        BodyEncoding = Encoding.UTF8,
-                        IsBodyHtml = false,
-                        Body = text
-                    })
-                    {
-                        smtp.Send(message);
-                        writer.WriteLine(string.Format("Текст: {0}{1}Письмо успешно отправлено.", text, Environment.NewLine));
-                    }
-
-                    result = ResponseOnSendRequest.MessageAccepted;
-
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    result = ResponseOnSendRequest.Error;
-                }
+                result = ResponseOnSendRequest.Error;
             }
             return result;
         }
@@ -438,90 +377,69 @@ namespace SmsRu
         {
             ResponseOnStatusRequest result = ResponseOnStatusRequest.MethodNotFound;
 
+            logger.Log(LogLevel.Info, string.Format("{0}={1}Проверка статуса по сообщению: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), id));
+
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", statusUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}&id={1}", auth, id);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStatusRequest.MessageRecieved))
+                                {
+                                    result = ResponseOnStatusRequest.MessageRecieved;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1}Проверка статуса по сообщению: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), id));
+                                    logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                    result = (ResponseOnStatusRequest)Convert.ToInt32(lines[0]);
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
-            }
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
 
-            using (StreamWriter writer = new StreamWriter(log_status, true))
-            {
-                writer.WriteLine(string.Format("{0}={1}{2}Проверка статуса по сообщению: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, id));
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
+                logger.Log(LogLevel.Trace, ex.StackTrace);
 
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", statusUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", statusUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}&id={1}", auth, id);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/status" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStatusRequest.MessageRecieved))
-                                    {
-                                        result = ResponseOnStatusRequest.MessageRecieved;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Проверка статуса по сообщению: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, id));
-                                            w.WriteLine(string.Format("Запрос: {0}", link));
-                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/status" + Environment.NewLine);
-                                        }
-
-                                        result = (ResponseOnStatusRequest)Convert.ToInt32(lines[0]);
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-
-                    result = ResponseOnStatusRequest.MessageNotFoundOrError;
-                }
+                result = ResponseOnStatusRequest.MessageNotFoundOrError;
             }
             return result;
         }
@@ -533,87 +451,68 @@ namespace SmsRu
         {
             string result = string.Empty;
 
+            logger.Log(LogLevel.Info, string.Format("{0}={1}Cтоимость сообщения и количество необходимых для отправки сообщений: {2} Сообщение: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), to, text));
+
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", costUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}&to={1}&text={2}", auth, to, text);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnCostRequest.Done))
+                                {
+                                    result = answer;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1}Cтоимость сообщения и количество необходимых для отправки сообщений: {2} Сообщение: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), to, text));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                    result = string.Empty;
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_cost, true))
-            {
-                writer.WriteLine(string.Format("{0}={1}{2}Cтоимость сообщения и количество необходимых для отправки сообщений: {3}{2}{3}Сообщение: {4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, to, text));
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", costUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", costUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}&to={1}&text={2}", auth, to, text);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/cost" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnCostRequest.Done))
-                                    {
-                                        result = answer;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Cтоимость сообщения и количество необходимых для отправки сообщений: {3}{2}{4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, to, text));
-                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=sms/cost" + Environment.NewLine);
-                                        }
-
-                                        result = string.Empty;
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-            }
             return result;
         }
         #endregion
@@ -624,87 +523,68 @@ namespace SmsRu
         {
             string result = string.Empty;
 
+            logger.Log(LogLevel.Info, string.Format("{0}={1} Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", balanceUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}", auth);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnBalanceRequest.Done))
+                                {
+                                    result = answer;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                    result = string.Empty;
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_balance, true))
-            {
-                writer.WriteLine(string.Format("{0}={1}{2}Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", balanceUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", balanceUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}", auth);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/balance" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnBalanceRequest.Done))
-                                    {
-                                        result = answer;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(string.Format("Ответ: {0}", answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/balance" + Environment.NewLine);
-                                        }
-
-                                        result = string.Empty;
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-            }
             return result;
         }
         #endregion
@@ -715,88 +595,68 @@ namespace SmsRu
         {
             string result = string.Empty;
 
+            logger.Log(LogLevel.Info, string.Format("{0}={1} Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", limitUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}", auth);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnLimitRequest.Done))
+                                {
+                                    result = answer;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                    result = string.Empty;
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
-
-            using (StreamWriter writer = new StreamWriter(log_limit, true))
-            {
-                writer.WriteLine(string.Format("{0}={1}{2}Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", limitUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", limitUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}", auth);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/limit" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnLimitRequest.Done))
-                                    {
-                                        result = answer;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/limit" + Environment.NewLine);
-                                        }
-
-                                        result = string.Empty;
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-            }
+            
             return result;
         }
         #endregion
@@ -807,86 +667,65 @@ namespace SmsRu
         {
             string result = string.Empty;
 
+            logger.Log(LogLevel.Info, string.Format("{0}={1} Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", sendersUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}", auth);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendersRequest.Done))
+                                {
+                                    result = answer;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_senders, true))
-            {
-                writer.WriteLine(string.Format("{0}={1}{2}Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", sendersUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", sendersUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}", auth);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/senders" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendersRequest.Done))
-                                    {
-                                        result = answer;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=my/senders" + Environment.NewLine);
-                                        }
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-            }
             return result;
         }
         #endregion
@@ -896,16 +735,6 @@ namespace SmsRu
         public string GetToken()
         {
             string result = string.Empty;
-
-            try
-            {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Ошибка доступа", ex.InnerException);
-            }
 
             try
             {
@@ -924,12 +753,8 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                using (StreamWriter w = new StreamWriter(log_error, true))
-                {
-                    w.WriteLine("Возникла ошибка при получении токена по адресу http://sms.ru/auth/get_token.");
-                    w.WriteLine(ex.Message);
-                    w.WriteLine(ex.StackTrace + Environment.NewLine);
-                }
+                logger.Log(LogLevel.Error, "Возникла ошибка при получении токена по адресу http://sms.ru/auth/get_token. " + ex.Message);
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
             return result;
         }
@@ -941,90 +766,70 @@ namespace SmsRu
         {
             ResponseOnAuthRequest result = ResponseOnAuthRequest.Error;
 
+            logger.Log(LogLevel.Info, string.Format("{0}={1} Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", authUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}", auth);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnAuthRequest.Done))
+                                {
+                                    result = ResponseOnAuthRequest.Done;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                    result = (ResponseOnAuthRequest)Convert.ToInt32(lines[0]);
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
+
+                result = ResponseOnAuthRequest.Error;
             }
-
-            using (StreamWriter writer = new StreamWriter(log_auth, true))
-            {
-                writer.WriteLine(string.Format("{0}={1}{2}Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", authUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", authUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}", auth);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=auth/check" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnAuthRequest.Done))
-                                    {
-                                        result = ResponseOnAuthRequest.Done;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=auth/check" + Environment.NewLine);
-                                        }
-
-                                        result = (ResponseOnAuthRequest)Convert.ToInt32(lines[0]);
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-
-                    result = ResponseOnAuthRequest.Error;
-                }
-            }
+            
             return result;
         }
         #endregion
@@ -1038,96 +843,75 @@ namespace SmsRu
             if (string.IsNullOrEmpty(text))
                 throw new ArgumentNullException("text", "Неверные входные данные - обязательный параметр.");
 
+
+            string auth = string.Empty;
+            string parameters = string.Empty;
+            string answer = string.Empty;
+            string recipients = string.Empty;
+            string token = string.Empty;
+
+            logger.Log(LogLevel.Info, string.Format("Добавление номера в стоплист: Номер: {0}, Примечание: {1}", phone, text));
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("api_id={0}", configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
+
+                parameters = string.Format("{0}&stoplist_phone={1}&stoplist_text={2}", auth, phone, text);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+
+                WebRequest request = WebRequest.Create(stoplistAddUrl);
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.Method = "POST";
+                byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                request.ContentLength = bytes.Length;
+                Stream os = request.GetRequestStream();
+                os.Write(bytes, 0, bytes.Length);
+                os.Close();
+
+                using (WebResponse resp = request.GetResponse())
+                {
+                    if (resp == null) return false;
+                    using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
+                    {
+                        answer = sr.ReadToEnd().Trim();
+                    }
+                }
+
+                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistAddRequest.Done))
+                {
+                    result = true;
+                }
+                else
+                {
+                    logger.Log(LogLevel.Info, string.Format("{0}={1}Добавление номера в стоплист: Номер: {2}, Примечание: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), phone, text));
+                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                    result = false;
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_stoplist, true))
-            {
-                string auth = string.Empty;
-                string parameters = string.Empty;
-                string answer = string.Empty;
-                string recipients = string.Empty;
-                string token = string.Empty;
-
-                writer.WriteLine(string.Format("Добавление номера в стоплист:{0}Номер: {1}, Примечание: {2}", Environment.NewLine, phone, text));
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
-
-                    parameters = string.Format("{0}&stoplist_phone={1}&stoplist_text={2}", auth, phone, text);
-
-                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
-
-                    WebRequest request = WebRequest.Create(stoplistAddUrl);
-                    request.ContentType = "application/x-www-form-urlencoded";
-                    request.Method = "POST";
-                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
-                    request.ContentLength = bytes.Length;
-                    Stream os = request.GetRequestStream();
-                    os.Write(bytes, 0, bytes.Length);
-                    os.Close();
-
-                    using (WebResponse resp = request.GetResponse())
-                    {
-                        if (resp == null) return false;
-                        using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
-                        {
-                            answer = sr.ReadToEnd().Trim();
-                        }
-                    }
-
-                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/add" + Environment.NewLine);
-
-                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistAddRequest.Done))
-                    {
-                        result = true;
-                    }
-                    else
-                    {
-                        using (StreamWriter w = new StreamWriter(log_error, true))
-                        {
-                            w.WriteLine(string.Format("{0}={1}{2}Добавление номера в стоплист:{2}Номер: {3}, Примечание: {4}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, phone, text));
-                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/add" + Environment.NewLine);
-                        }
-                        result = false;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-
-            }
             return result;
         }
         
@@ -1135,96 +919,74 @@ namespace SmsRu
         {
             bool result = false;
 
+            string auth = string.Empty;
+            string parameters = string.Empty;
+            string answer = string.Empty;
+            string recipients = string.Empty;
+            string token = string.Empty;
+
+            logger.Log(LogLevel.Info, string.Format("Удаление номера из стоплиста: Номер: {0}", phone));
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("api_id={0}", configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
+
+                parameters = string.Format("{0}&stoplist_phone={1}", auth, phone);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+
+                WebRequest request = WebRequest.Create(stoplistDelUrl);
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.Method = "POST";
+                byte[] bytes = Encoding.UTF8.GetBytes(parameters);
+                request.ContentLength = bytes.Length;
+                Stream os = request.GetRequestStream();
+                os.Write(bytes, 0, bytes.Length);
+                os.Close();
+
+                using (WebResponse resp = request.GetResponse())
+                {
+                    if (resp == null) return false;
+                    using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
+                    {
+                        answer = sr.ReadToEnd().Trim();
+                    }
+                }
+
+                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistDeleteRequest.Done))
+                {
+                    result = true;
+                }
+                else
+                {
+                    logger.Log(LogLevel.Info, string.Format("{0}={1}Удаление номера из стоплиста: Номер: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), phone));
+                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                    result = false;
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_stoplist, true))
-            {
-                string auth = string.Empty;
-                string parameters = string.Empty;
-                string answer = string.Empty;
-                string recipients = string.Empty;
-                string token = string.Empty;
-
-                writer.WriteLine(string.Format("Удаление номера из стоплиста:{0}Номер: {1}", Environment.NewLine, phone));
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("api_id={0}", configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("login={0}&token={1}&sha512={2}", configuration.Login, token, sha512wapi);
-
-                    parameters = string.Format("{0}&stoplist_phone={1}", auth, phone);
-
-                    writer.WriteLine(string.Format("Запрос: {0}{1}", Environment.NewLine, parameters));
-
-                    WebRequest request = WebRequest.Create(stoplistDelUrl);
-                    request.ContentType = "application/x-www-form-urlencoded";
-                    request.Method = "POST";
-                    byte[] bytes = Encoding.UTF8.GetBytes(parameters);
-                    request.ContentLength = bytes.Length;
-                    Stream os = request.GetRequestStream();
-                    os.Write(bytes, 0, bytes.Length);
-                    os.Close();
-
-                    using (WebResponse resp = request.GetResponse())
-                    {
-                        if (resp == null) return false;
-                        using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
-                        {
-                            answer = sr.ReadToEnd().Trim();
-                        }
-                    }
-
-                    writer.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/del" + Environment.NewLine);
-
-                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistDeleteRequest.Done))
-                    {
-                        result = true;
-                    }
-                    else
-                    {
-                        using (StreamWriter w = new StreamWriter(log_error, true))
-                        {
-                            w.WriteLine(string.Format("{0}={1}{2}Удаление номера из стоплиста:{2}Номер: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine, phone));
-                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/del" + Environment.NewLine);
-                        }
-                        result = false;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-
-            }
             return result;
         }
         
@@ -1232,88 +994,66 @@ namespace SmsRu
         {
             string result = string.Empty;
 
+            string auth = string.Empty;
+            string link = string.Empty;
+            string answer = string.Empty;
+            string token = string.Empty;
+
+            logger.Log(LogLevel.Info, string.Format("Получение номеров из стоплиста:"));
+
             try
             {
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                token = GetToken();
+
+                string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
+                string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
+
+                if (authType == EnumAuthenticationTypes.Simple)
+                    auth = string.Format("{0}?api_id={1}", stoplistGetUrl, configuration.ApiId);
+                if (authType == EnumAuthenticationTypes.Strong)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, configuration.Login, token, sha512);
+                if (authType == EnumAuthenticationTypes.StrongApi)
+                    auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, configuration.Login, token, sha512wapi);
+
+                link = string.Format("{0}", auth);
+
+                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+
+                WebRequest req = WebRequest.Create(link);
+                using (WebResponse response = req.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        if (stream != null)
+                            using (StreamReader sr = new StreamReader(stream))
+                            {
+                                answer = sr.ReadToEnd();
+
+                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+
+                                string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
+                                if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistGetRequest.Done))
+                                {
+                                    result = answer;
+                                }
+                                else
+                                {
+                                    logger.Log(LogLevel.Info, string.Format("{0}={1}Получение номеров из стоплиста:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                }
+                            }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка доступа", ex.InnerException);
+                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
+                    ex.Message);
+
+                logger.Log(LogLevel.Trace, ex.StackTrace);
             }
 
-            using (StreamWriter writer = new StreamWriter(log_stoplist, true))
-            {
-                string auth = string.Empty;
-                string link = string.Empty;
-                string answer = string.Empty;
-                string token = string.Empty;
-
-                writer.WriteLine(string.Format("Получение номеров из стоплиста:"));
-
-                try
-                {
-                    token = GetToken();
-
-                    string sha512 = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}", configuration.Password, token)).ToLower();
-                    string sha512wapi = HashCodeHelper.GetSHA512Hash(string.Format("{0}{1}{2}", configuration.Password, token, configuration.ApiId)).ToLower();
-
-                    if (authType == EnumAuthenticationTypes.Simple)
-                        auth = string.Format("{0}?api_id={1}", stoplistGetUrl, configuration.ApiId);
-                    if (authType == EnumAuthenticationTypes.Strong)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, configuration.Login, token, sha512);
-                    if (authType == EnumAuthenticationTypes.StrongApi)
-                        auth = string.Format("{0}?login={1}&token={2}&sha512={3}", stoplistGetUrl, configuration.Login, token, sha512wapi);
-
-                    link = string.Format("{0}", auth);
-                    writer.WriteLine(string.Format("Запрос: {0}", link));
-
-                    WebRequest req = WebRequest.Create(link);
-                    using (WebResponse response = req.GetResponse())
-                    {
-                        using (Stream stream = response.GetResponseStream())
-                        {
-                            if (stream != null)
-                                using (StreamReader sr = new StreamReader(stream))
-                                {
-                                    answer = sr.ReadToEnd();
-
-                                    writer.WriteLine(string.Format("Ответ: {0}", answer));
-                                    writer.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/get" + Environment.NewLine);
-
-                                    string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
-                                    if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistGetRequest.Done))
-                                    {
-                                        result = answer;
-                                    }
-                                    else
-                                    {
-                                        using (StreamWriter w = new StreamWriter(log_error, true))
-                                        {
-                                            w.WriteLine(string.Format("{0}={1}{2}Получение номеров из стоплиста:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), Environment.NewLine));
-                                            w.WriteLine(string.Format("Ответ: {0}{1}", Environment.NewLine, answer));
-                                            w.WriteLine("Документация - http://sms.ru/?panel=api&subpanel=method&show=stoplist/get" + Environment.NewLine);
-                                        }
-                                    }
-                                }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    writer.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                    writer.WriteLine(ex.Message);
-                    writer.WriteLine(ex.StackTrace + Environment.NewLine);
-
-                    using (StreamWriter w = new StreamWriter(log_error, true))
-                    {
-                        w.WriteLine("Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде. Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
-                        w.WriteLine(ex.Message);
-                        w.WriteLine(ex.StackTrace + Environment.NewLine);
-                    }
-                }
-
-            }
             return result;
         }
         #endregion
