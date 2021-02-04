@@ -1,10 +1,11 @@
-﻿using NLog;
+﻿using Microsoft.AspNetCore.Http;
+using NLog;
 using System;
-using System.Web;
+using System.Net.Http;
 
 namespace SmsRu.Handlers
 {
-    public class CallbackHandler : IHttpHandler
+    public class CallbackHandler : HttpClientHandler
     {
         /// <summary>
         /// You will need to configure this handler in the Web.config file of your 
@@ -38,7 +39,7 @@ namespace SmsRu.Handlers
                     for (int i = 0; i < context.Request.Form.Keys.Count; i++)
                     {
                         index = "data[" + i.ToString() + "]";
-                        string[] lines = context.Request.Form[index].Split(new string[] { "\n" }, StringSplitOptions.None);
+                        string[] lines = context.Request.Form[index].ToString().Split(new string[] { "\n" }, StringSplitOptions.None);
                         if (lines[0] == "sms_status")
                         {
                             string smsID = lines[1];
@@ -51,7 +52,8 @@ namespace SmsRu.Handlers
 
                             // Ваш код.
                             // Можно использовать EnumResponseCodes для работы со статусами.
-                            context.Response.Write("100");
+                            context.Response.ContentType = "text/plain";
+                            context.Response.WriteAsync("100");
                         }
                     }
                 }
@@ -64,9 +66,8 @@ namespace SmsRu.Handlers
                     logger.Log(LogLevel.Trace, ex.StackTrace);
                 }
             }
-            context.Response.ContentType = "text/plain";
-            context.Response.Flush();
-            context.Response.End();
+            //context.Response.Flush();
+            //context.Response.End();
         }
 
         #endregion

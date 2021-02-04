@@ -32,7 +32,7 @@ namespace SmsRu
             string smtpPassword,
             string smtpServer,
             int smtpPort,
-            bool smtpUsrSSL,
+            bool smtpUseSSL,
             bool translit,
             bool test
             )
@@ -47,7 +47,7 @@ namespace SmsRu
             this.smtpPassword = smtpPassword;
             this.smtpServer = smtpServer;
             this.smtpPort = smtpPort;
-            this.smtpUsrSSL = smtpUsrSSL;
+            this.smtpUsrSSL = smtpUseSSL;
             this.translit = translit;
             this.test = test;
         }

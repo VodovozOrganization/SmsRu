@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmsSendInterface", "..\Vodovoz\Services\Library\SmsSendInterface\SmsSendInterface.csproj", "{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmsRuVodovozAdapter", "SmsRuVodovozAdapter\SmsRuVodovozAdapter.csproj", "{6F47C182-3693-471A-9345-894459BC1C81}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F47C182-3693-471A-9345-894459BC1C81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F47C182-3693-471A-9345-894459BC1C81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F47C182-3693-471A-9345-894459BC1C81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F47C182-3693-471A-9345-894459BC1C81}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
