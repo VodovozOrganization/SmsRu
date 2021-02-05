@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SmsRu
+﻿namespace SmsRu
 {
-    public class SmsRuConfiguration
+    public class SmsRuConfiguration : ISmsRuConfiguration
     {
         private readonly string login;
         private readonly string password;

@@ -38,10 +38,10 @@ namespace SmsRu
         const string stoplistDelUrl = "http://sms.ru/stoplist/del";
         const string stoplistGetUrl = "http://sms.ru/stoplist/get";
 
-        private readonly SmsRuConfiguration configuration;
+        private readonly ISmsRuConfiguration configuration;
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
 
-        public SmsRuProvider(SmsRuConfiguration configuration)
+        public SmsRuProvider(ISmsRuConfiguration configuration)
         {
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }

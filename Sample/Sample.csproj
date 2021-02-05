@@ -47,6 +47,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\SmsRuVodovozAdapter\SmsRuVodovozAdapter.csproj">
+      <Project>{6f47c182-3693-471a-9345-894459bc1c81}</Project>
+      <Name>SmsRuVodovozAdapter</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SmsRu\SmsRu.csproj">
       <Project>{41ffdfe5-0e39-410d-a416-78ea91ca6c8a}</Project>
       <Name>SmsRu</Name>
