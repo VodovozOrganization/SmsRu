@@ -9,7 +9,7 @@ namespace SmsRuVodovozAdapter
     {
         private readonly SmsRuProvider smsRuProvider;
 
-        public SmsSmsRuSendController(SmsRuConfiguration configuration)
+        public SmsSmsRuSendController(ISmsRuConfiguration configuration)
         {
 
             this.smsRuProvider = new SmsRuProvider(configuration);
