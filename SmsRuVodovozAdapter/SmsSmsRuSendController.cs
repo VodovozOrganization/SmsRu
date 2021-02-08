@@ -1,4 +1,5 @@
 ﻿using SmsRu;
+using SmsRu.Enumerations;
 using SmsSendInterface;
 using System;
 using System.Threading.Tasks;
@@ -8,10 +9,11 @@ namespace SmsRuVodovozAdapter
     public class SmsSmsRuSendController : ISmsSender, ISmsBalanceNotifier
     {
         private readonly SmsRuProvider smsRuProvider;
+        private readonly ISmsRuConfiguration configuration;
 
         public SmsSmsRuSendController(ISmsRuConfiguration configuration)
         {
-
+            this.configuration = configuration;
             this.smsRuProvider = new SmsRuProvider(configuration);
         }
 
@@ -19,7 +21,7 @@ namespace SmsRuVodovozAdapter
         {
             get
             {
-                var balanceResponse = smsRuProvider.CheckBalance(SmsRu.Enumerations.EnumAuthenticationTypes.Simple); // Должно быть из откуда-нибудь
+                var balanceResponse = smsRuProvider.CheckBalance(EnumAuthenticationTypes.StrongApi);
 
                 BalanceResponse balance = new BalanceResponse() { 
                     BalanceType = BalanceType.CurrencyBalance,
@@ -36,8 +38,35 @@ namespace SmsRuVodovozAdapter
         {
             try
             {
-                var response = smsRuProvider.Send("ТУТ ДОЛЖЕН БЫТЬ НОМЕР С КОТОРОГО ОТПРАВЛЯЕТСЯ СМС", message.MobilePhoneNumber, message.MessageText, message.ScheduleTime); // TODO: это в конфигурацию
-                return new SmsSendResult(SmsSentStatus.Accepted);
+                var response = smsRuProvider.Send(configuration.SmsNumberFrom, message.MobilePhoneNumber, message.MessageText, message.ScheduleTime);
+
+                if (!string.IsNullOrEmpty(response))
+                {
+                    var lines = response.Split('\n');
+
+                    var enumStatus = Enum.Parse(typeof(ResponseOnSendRequest), lines[0]);
+                    switch (enumStatus)
+                    {
+                        case ResponseOnSendRequest.MessageAccepted:
+                            return new SmsSendResult(SmsSentStatus.Accepted);
+                        case ResponseOnSendRequest.BadRecipient:
+                        case ResponseOnSendRequest.BlacklistedRecepient:
+                        case ResponseOnSendRequest.CantSendToThisNumber:
+                        case ResponseOnSendRequest.DayMessageLimitToNumber:
+                            return new SmsSendResult(SmsSentStatus.InvalidMobilePhone);
+                        case ResponseOnSendRequest.MessageTextNotSpecified:
+                            return new SmsSendResult(SmsSentStatus.TextIsEmpty);
+                        case ResponseOnSendRequest.BadSender:
+                            return new SmsSendResult(SmsSentStatus.SenderAddressInvalid);
+                        case ResponseOnSendRequest.OutOfMoney:
+                            return new SmsSendResult(SmsSentStatus.NotEnoughBalance);
+                        default:
+                            return new SmsSendResult(SmsSentStatus.UnknownError);
+                    }
+                } else
+                {
+                    throw new Exception("Не получен ответ от сервера");
+                }
             } catch (Exception ex)
             {
                 throw ex;

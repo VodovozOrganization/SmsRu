@@ -8,6 +8,7 @@
         private readonly string partnerId;
         private readonly string emailToSmsGateEmail;
         private readonly string email;
+        private readonly string smsNumberFrom;
         private readonly string smtpLogin;
         private readonly string smtpPassword;
         private readonly string smtpServer;
@@ -22,6 +23,7 @@
             string apiId,
             string partnerId,
             string email,
+            string smsNumberFrom,
             string smtpLogin,
             string smtpPassword,
             string smtpServer,
@@ -37,6 +39,7 @@
             this.partnerId = partnerId;
             this.emailToSmsGateEmail = apiId + "@sms.ru";
             this.email = email;
+            this.smsNumberFrom = smsNumberFrom;
             this.smtpLogin = smtpLogin;
             this.smtpPassword = smtpPassword;
             this.smtpServer = smtpServer;
@@ -97,7 +100,7 @@
         public int SmtpPort => smtpPort;
 
         /// <summary>
-        /// Флаг - использовать SSL
+        /// Флаг - использовать SSL при подключении к серверу SMTP
         /// </summary>
         public bool SmtpUseSSL => smtpUsrSSL;
 
@@ -110,5 +113,10 @@
         /// Имитирует отправку сообщения для тестирования ваших программ на правильность обработки ответов сервера. При этом само сообщение не отправляется и баланс не расходуется.
         /// </summary>
         public bool Test => test;
+
+        /// <summary>
+        /// Номер с которого будет оправлено сообщение (необходимо согласование с администрацией Sms.ru)
+        /// </summary>
+        public string SmsNumberFrom => smsNumberFrom;
     }
 }
