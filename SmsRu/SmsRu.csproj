@@ -5,6 +5,7 @@
     <Company>Vodovoz</Company>
     <PackageId>SmsRu_Unofficial_API_Client</PackageId>
     <Product>Sms.ru Unofficial API Client</Product>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>Fork of repository:
 https://github.com/GennadyKarasev/SmsRu</Description>
     <PackageProjectUrl>https://github.com/VodovozOrganization/SmsRu</PackageProjectUrl>
