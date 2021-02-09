@@ -1,6 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Sergey Efimov, Gennady Karasev</Authors>
+    <Company>Vodovoz</Company>
+    <PackageId>SmsRu_Unofficial_API_Client</PackageId>
+    <Product>Sms.ru Unofficial API Client</Product>
+    <Description>Fork of repository:
+https://github.com/GennadyKarasev/SmsRu</Description>
+    <PackageProjectUrl>https://github.com/VodovozOrganization/SmsRu</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/VodovozOrganization/SmsRu</RepositoryUrl>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Properties\**" />
