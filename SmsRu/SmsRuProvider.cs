@@ -1,4 +1,4 @@
-﻿using NLog;
+﻿using Microsoft.Extensions.Logging;
 using SmsRu.Enumerations;
 using SmsRu.Helpers;
 using System;
@@ -39,11 +39,12 @@ namespace SmsRu
         const string stoplistGetUrl = "http://sms.ru/stoplist/get";
 
         private readonly ISmsRuConfiguration configuration;
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        private readonly ILogger<SmsRuProvider> logger;
 
-        public SmsRuProvider(ISmsRuConfiguration configuration)
+        public SmsRuProvider(ISmsRuConfiguration configuration, ILogger<SmsRuProvider> logger)
         {
             this.configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger)); ;
         }
 
         #region Отправка сообщений
@@ -110,7 +111,7 @@ namespace SmsRu
             }
             recipients = recipients.Substring(0, recipients.Length - 1);
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+            logger.LogInformation("{Date}={Time}Отправка СМС получателям: {Recipients}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients);
 
             try
             {
@@ -137,7 +138,7 @@ namespace SmsRu
                     parameters += "&test=1";
 
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+                logger.LogInformation("Запрос: {0}", parameters);
 
                 WebRequest request = WebRequest.Create(sendUrl);
                 request.ContentType = "application/x-www-form-urlencoded";
@@ -159,7 +160,7 @@ namespace SmsRu
 
                 // http://sms.ru/?panel=api&subpanel=method&show=sms/send
 
-                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                logger.LogInformation("Ответ: {Answer}", answer);
 
                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
@@ -168,22 +169,21 @@ namespace SmsRu
                 }
                 else
                 {
-                    logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+                    logger.LogInformation("{Date}={Time}Отправка СМС получателям: {Recipients}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients);
 
                     // http://sms.ru/?panel=api&subpanel=method&show=sms/send
 
-                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                    logger.LogInformation("Ответ: {Answer}", answer);
 
                     result = string.Empty;
                 }
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,                 
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;
@@ -231,7 +231,7 @@ namespace SmsRu
                 recipients += "&multi[" + kvp.Key + "]=" + kvp.Value;
             }
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+            logger.LogInformation("{Date}={Time}Отправка СМС получателям: {Recipients}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients);
 
             try
             {
@@ -257,7 +257,7 @@ namespace SmsRu
                 if (configuration.Test == true)
                     parameters += "&test=1";
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+                logger.LogInformation("Запрос: {Parameters}", parameters);
 
                 WebRequest request = WebRequest.Create(sendUrl);
                 request.ContentType = "application/x-www-form-urlencoded";
@@ -277,7 +277,7 @@ namespace SmsRu
                     }
                 }
 
-                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                logger.LogInformation("Ответ: {Answer}", answer);
 
                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendRequest.MessageAccepted))
@@ -286,18 +286,17 @@ namespace SmsRu
                 }
                 else
                 {
-                    logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+                    logger.LogInformation("{Date}={Time}Отправка СМС получателям: {Recipients}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients);
 
                     result = string.Empty;
                 }
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,                 
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
             return result;
         }
@@ -329,7 +328,7 @@ namespace SmsRu
                 }
                 recipients = recipients.Substring(0, recipients.Length - 1);
 
-                logger.Log(LogLevel.Info, string.Format("{0}={1}Отправка СМС получателям: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients));
+                logger.LogInformation("{Date}={Time}Отправка СМС получателям: {Recipients}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), recipients);
 
                 var smtp = new SmtpClient
                 {
@@ -350,7 +349,7 @@ namespace SmsRu
                 {
                     smtp.Send(message);
 
-                    logger.Log(LogLevel.Info, string.Format("Текст: {0} Письмо успешно отправлено.", text));
+                    logger.LogInformation("Текст: {MessageText} Письмо успешно отправлено.", text);
                 }
 
                 result = ResponseOnSendRequest.MessageAccepted;
@@ -358,13 +357,12 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
-
-                result = ResponseOnSendRequest.Error;
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
+            
+            result = ResponseOnSendRequest.Error;
             }
             return result;
         }
@@ -377,7 +375,7 @@ namespace SmsRu
         {
             ResponseOnStatusRequest result = ResponseOnStatusRequest.MethodNotFound;
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1}Проверка статуса по сообщению: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), id));
+            logger.LogInformation("{Date}={Time}Проверка статуса по сообщению: {Id}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), id);
 
             string auth = string.Empty;
             string link = string.Empty;
@@ -400,7 +398,7 @@ namespace SmsRu
 
                 link = string.Format("{0}&id={1}", auth, id);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -412,7 +410,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStatusRequest.MessageRecieved))
@@ -421,9 +419,9 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1}Проверка статуса по сообщению: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), id));
-                                    logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time}Проверка статуса по сообщению: {Id}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), id);
+                                    logger.LogInformation("Запрос: {Link}", link);
+                                    logger.LogInformation("Ответ: {Answer}", answer);
 
                                     result = (ResponseOnStatusRequest)Convert.ToInt32(lines[0]);
                                 }
@@ -433,11 +431,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
 
                 result = ResponseOnStatusRequest.MessageNotFoundOrError;
             }
@@ -451,7 +448,7 @@ namespace SmsRu
         {
             string result = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1}Cтоимость сообщения и количество необходимых для отправки сообщений: {2} Сообщение: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), to, text));
+            logger.LogInformation("{Date}={Time}Cтоимость сообщения и количество необходимых для отправки сообщений на номер: {TargetPhoneNumber} Сообщение: {MessageText}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), to, text);
 
             string auth = string.Empty;
             string link = string.Empty;
@@ -474,7 +471,7 @@ namespace SmsRu
 
                 link = string.Format("{0}&to={1}&text={2}", auth, to, text);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -486,7 +483,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnCostRequest.Done))
@@ -495,8 +492,9 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1}Cтоимость сообщения и количество необходимых для отправки сообщений: {2} Сообщение: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), to, text));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time}Cтоимость сообщения и количество необходимых для отправки сообщений на номер: {TargetPhoneNumber} Сообщение: {MessageText}",
+                                        DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), to, text);
+                                    logger.LogInformation("Ответ: {Answer}", answer);
 
                                     result = string.Empty;
                                 }
@@ -506,11 +504,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;
@@ -523,7 +520,7 @@ namespace SmsRu
         {
             string result = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1} Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+            logger.LogInformation("{Date}={Time} Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
 
             string auth = string.Empty;
             string link = string.Empty;
@@ -546,7 +543,7 @@ namespace SmsRu
 
                 link = string.Format("{0}", auth);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -558,7 +555,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnBalanceRequest.Done))
@@ -567,8 +564,8 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time} Получение состояния баланса", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
+                                    logger.LogInformation("Ответ: {Answer}", answer);
 
                                     result = string.Empty;
                                 }
@@ -578,11 +575,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;
@@ -595,7 +591,7 @@ namespace SmsRu
         {
             string result = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1} Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+            logger.LogInformation("{Date}={Time} Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
 
             string auth = string.Empty;
             string link = string.Empty;
@@ -618,7 +614,7 @@ namespace SmsRu
 
                 link = string.Format("{0}", auth);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -630,7 +626,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnLimitRequest.Done))
@@ -639,8 +635,8 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time} Получение текущего состояния дневного лимита:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
+                                    logger.LogInformation("Ответ: {Answer}", answer);
 
                                     result = string.Empty;
                                 }
@@ -650,11 +646,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
             
             return result;
@@ -667,7 +662,7 @@ namespace SmsRu
         {
             string result = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1} Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+            logger.LogInformation("{Date}={Time} Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
             string auth = string.Empty;
             string link = string.Empty;
             string answer = string.Empty;
@@ -689,7 +684,7 @@ namespace SmsRu
 
                 link = string.Format("{0}", auth);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -701,7 +696,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnSendersRequest.Done))
@@ -710,8 +705,8 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time} Получение списка отправителей:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
+                                    logger.LogInformation("Ответ: {Answer}", answer);
                                 }
                             }
                     }
@@ -719,11 +714,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;
@@ -753,8 +747,7 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла ошибка при получении токена по адресу http://sms.ru/auth/get_token. " + ex.Message);
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(ex, "Возникла ошибка при получении токена по адресу http://sms.ru/auth/get_token. ");
             }
             return result;
         }
@@ -766,7 +759,7 @@ namespace SmsRu
         {
             ResponseOnAuthRequest result = ResponseOnAuthRequest.Error;
 
-            logger.Log(LogLevel.Info, string.Format("{0}={1} Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
+            logger.LogInformation("{Date}={Time} Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
 
             string auth = string.Empty;
             string link = string.Empty;
@@ -789,7 +782,7 @@ namespace SmsRu
 
                 link = string.Format("{0}", auth);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -801,7 +794,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnAuthRequest.Done))
@@ -810,8 +803,8 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1} Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time} Проверка номера телефона и пароля на действительность:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
+                                    logger.LogInformation("Ответ: {Answer}", answer);
 
                                     result = (ResponseOnAuthRequest)Convert.ToInt32(lines[0]);
                                 }
@@ -821,11 +814,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
 
                 result = ResponseOnAuthRequest.Error;
             }
@@ -850,7 +842,7 @@ namespace SmsRu
             string recipients = string.Empty;
             string token = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("Добавление номера в стоплист: Номер: {0}, Примечание: {1}", phone, text));
+            logger.LogInformation("Добавление номера в стоплист: Номер: {PhoneNumber}, Примечание: {Reason}", phone, text);
 
             try
             {
@@ -868,7 +860,7 @@ namespace SmsRu
 
                 parameters = string.Format("{0}&stoplist_phone={1}&stoplist_text={2}", auth, phone, text);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+                logger.LogInformation("Запрос: {Parameters}", parameters);
 
                 WebRequest request = WebRequest.Create(stoplistAddUrl);
                 request.ContentType = "application/x-www-form-urlencoded";
@@ -888,7 +880,7 @@ namespace SmsRu
                     }
                 }
 
-                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                logger.LogInformation("Ответ: {Answer}", answer);
 
                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistAddRequest.Done))
@@ -897,19 +889,19 @@ namespace SmsRu
                 }
                 else
                 {
-                    logger.Log(LogLevel.Info, string.Format("{0}={1}Добавление номера в стоплист: Номер: {2}, Примечание: {3}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), phone, text));
-                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                    logger.LogInformation("{Date}={Time}Добавление номера в стоплист: Номер: {PhoneNumber}, Примечание: {Reason}",
+                        DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), phone, text);
+                    logger.LogInformation("Ответ: {Answer}", answer);
 
                     result = false;
                 }
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;
@@ -925,7 +917,7 @@ namespace SmsRu
             string recipients = string.Empty;
             string token = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("Удаление номера из стоплиста: Номер: {0}", phone));
+            logger.LogInformation("Удаление номера из стоплиста: Номер: {PhoneNumber}", phone);
 
             try
             {
@@ -943,7 +935,7 @@ namespace SmsRu
 
                 parameters = string.Format("{0}&stoplist_phone={1}", auth, phone);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", parameters));
+                logger.LogInformation("Запрос: {Parameters}", parameters);
 
                 WebRequest request = WebRequest.Create(stoplistDelUrl);
                 request.ContentType = "application/x-www-form-urlencoded";
@@ -963,7 +955,7 @@ namespace SmsRu
                     }
                 }
 
-                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                logger.LogInformation("Ответ: {Answer}", answer);
 
                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistDeleteRequest.Done))
@@ -972,19 +964,18 @@ namespace SmsRu
                 }
                 else
                 {
-                    logger.Log(LogLevel.Info, string.Format("{0}={1}Удаление номера из стоплиста: Номер: {2}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), phone));
-                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                    logger.LogInformation("{Date}={Time}Удаление номера из стоплиста: Номер: {PhoneNumber}", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString(), phone);
+                    logger.LogInformation("Ответ: {Answer}", answer);
 
                     result = false;
                 }
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;
@@ -999,7 +990,7 @@ namespace SmsRu
             string answer = string.Empty;
             string token = string.Empty;
 
-            logger.Log(LogLevel.Info, string.Format("Получение номеров из стоплиста:"));
+            logger.LogInformation("Получение номеров из стоплиста:");
 
             try
             {
@@ -1017,7 +1008,7 @@ namespace SmsRu
 
                 link = string.Format("{0}", auth);
 
-                logger.Log(LogLevel.Info, string.Format("Запрос: {0}", link));
+                logger.LogInformation("Запрос: {Link}", link);
 
                 WebRequest req = WebRequest.Create(link);
                 using (WebResponse response = req.GetResponse())
@@ -1029,7 +1020,7 @@ namespace SmsRu
                             {
                                 answer = sr.ReadToEnd();
 
-                                logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                logger.LogInformation("Ответ: {Answer}", answer);
 
                                 string[] lines = answer.Split(new string[] { "\n" }, StringSplitOptions.None);
                                 if (Convert.ToInt32(lines[0]) == Convert.ToInt32(ResponseOnStoplistGetRequest.Done))
@@ -1038,8 +1029,8 @@ namespace SmsRu
                                 }
                                 else
                                 {
-                                    logger.Log(LogLevel.Info, string.Format("{0}={1}Получение номеров из стоплиста:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString()));
-                                    logger.Log(LogLevel.Info, string.Format("Ответ: {0}", answer));
+                                    logger.LogInformation("{Date}={Time}Получение номеров из стоплиста:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
+                                    logger.LogInformation("Ответ: {Answer}", answer);
                                 }
                             }
                     }
@@ -1047,11 +1038,10 @@ namespace SmsRu
             }
             catch (Exception ex)
             {
-                logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                    ex.Message);
-
-                logger.Log(LogLevel.Trace, ex.StackTrace);
+                logger.LogError(
+                    ex,
+                    "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                    " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
             }
 
             return result;

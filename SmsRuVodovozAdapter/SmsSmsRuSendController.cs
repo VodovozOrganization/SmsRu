@@ -1,4 +1,5 @@
-﻿using SmsRu;
+﻿using Microsoft.Extensions.Logging;
+using SmsRu;
 using SmsRu.Enumerations;
 using SmsSendInterface;
 using System;
@@ -11,10 +12,10 @@ namespace SmsRuVodovozAdapter
         private readonly SmsRuProvider smsRuProvider;
         private readonly ISmsRuConfiguration configuration;
 
-        public SmsSmsRuSendController(ISmsRuConfiguration configuration)
+        public SmsSmsRuSendController(ISmsRuConfiguration configuration, ILogger<SmsRuProvider> logger)
         {
             this.configuration = configuration;
-            this.smsRuProvider = new SmsRuProvider(configuration);
+            this.smsRuProvider = new SmsRuProvider(configuration, logger);
         }
 
         public BalanceResponse GetBalanceResponse

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using NLog;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
 
@@ -7,6 +7,8 @@ namespace SmsRu.Handlers
 {
     public class CallbackHandler : HttpClientHandler
     {
+        private readonly ILogger<CallbackHandler> logger;
+
         /// <summary>
         /// You will need to configure this handler in the Web.config file of your 
         /// web and register it with IIS before being able to use it. For more information
@@ -22,7 +24,10 @@ namespace SmsRu.Handlers
         /// </summary>
         #region IHttpHandler Members
 
-        private static readonly Logger logger = LogManager.GetCurrentClassLogger();
+        public CallbackHandler(ILogger<CallbackHandler> logger)
+        {
+            this.logger = logger;
+        }
 
         public bool IsReusable
         {
@@ -47,8 +52,8 @@ namespace SmsRu.Handlers
 
                             // http://sms.ru/?panel=apps&subpanel=cb
 
-                            logger.Log(LogLevel.Info, string.Format(string.Format("{0}={1}Callback:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString())));
-                            logger.Log(LogLevel.Info, string.Format("Запрос: {0}", context.Request.Form[index]));
+                            logger.LogInformation("{Date}={Time}Callback:", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString());
+                            logger.LogInformation("Запрос: {Request}", context.Request.Form[index]);
 
                             // Ваш код.
                             // Можно использовать EnumResponseCodes для работы со статусами.
@@ -59,11 +64,10 @@ namespace SmsRu.Handlers
                 }
                 catch (Exception ex)
                 {
-                    logger.Log(LogLevel.Error, "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
-                        " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен. " +
-                        ex.Message);
-
-                    logger.Log(LogLevel.Trace, ex.StackTrace);
+                    logger.LogError(
+                        ex,
+                        "Возникла непонятная ошибка. Нужно проверить значения в файле конфигурации и разобраться в коде." +
+                        " Скорее всего введены неверные значения, либо сервер SMS.RU недоступен.");
                 }
             }
             //context.Response.Flush();
