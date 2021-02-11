@@ -10,6 +10,10 @@
 https://github.com/GennadyKarasev/SmsRu</Description>
     <PackageProjectUrl>https://github.com/VodovozOrganization/SmsRu</PackageProjectUrl>
     <RepositoryUrl>https://github.com/VodovozOrganization/SmsRu</RepositoryUrl>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.0.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Properties\**" />
