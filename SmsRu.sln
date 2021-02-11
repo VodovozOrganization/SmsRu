@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmsRu", "SmsRu\SmsRu.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csproj", "{2130B73A-4510-4790-BB31-CA39ED691A51}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SmsSendInterface", "..\Vodovoz\Services\Library\SmsSendInterface\SmsSendInterface.csproj", "{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{2130B73A-4510-4790-BB31-CA39ED691A51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2130B73A-4510-4790-BB31-CA39ED691A51}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2130B73A-4510-4790-BB31-CA39ED691A51}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AF0C132E-1F93-4A70-BC01-65DD3AF1CE85}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
